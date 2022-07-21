@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
+
 pragma solidity ^0.8.9;
 
 import "hardhat/console.sol";
@@ -6,9 +7,9 @@ import "hardhat/console.sol";
 import "./LinkedBidsList.sol";
 // import "./SignatureValidator.sol";
 
-contract Lock is LinkedBidsList {
+contract Abstract is LinkedBidsList {
     
-    constructor(uint _unlockTime) payable {
+    constructor() {
        
     }
 

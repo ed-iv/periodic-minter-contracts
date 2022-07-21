@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 
-// Author: Gen4
-// Email: gen4mail@gmail.com
-// Website: https://bigday.art/
-
+import "hardhat/console.sol";
 pragma solidity ^0.8.9;
 
 contract LinkedBidsList {
@@ -14,31 +11,39 @@ contract LinkedBidsList {
   }
 
   uint256 constant MIN_BID_INCRESE_PERCENT = 500; // 5%
+  uint256 constant MIN_BID_AMOUNT = 100000000000000; // 0.001 ETH
 
   mapping(uint256 => uint256) private _nextBidIDs;
   mapping(uint256 => uint256) private _prevBidIDs;
   mapping(uint256 => Bid) private _bids;
 
-  uint256 public highestBidID;
-  uint256 public listSize;
+  uint256 private highestBidID;
+  uint256 public queueSize;
 
-  constructor() {
-  }
+
+
+  // TODO 
+  // constructor(_MIN_BID_INCRESE_PERCENT, _MIN_BID_AMOUNT) {
+  //   MIN_BID_INCRESE_PERCENT = _MIN_BID_INCRESE_PERCENT;
+  //   MIN_BID_AMOUNT = _MIN_BID_AMOUNT;
+  // }
 
   function _addBid(uint256 bidID, uint256 value, address bidder) internal {
     require(!_ifBidExists(bidID), "Bid ID already exists");
-    require(value > _bids[highestBidID].amount);
+    require(value > _bids[highestBidID].amount, "Bid amount lower then highest");
+    require(value > MIN_BID_AMOUNT, "Bid amount is low");
     if (_bids[highestBidID].amount > 0) {
-      _prevBidIDs[highestBidID] = bidID;
-      _nextBidIDs[bidID] = highestBidID;
-      _prevBidIDs[bidID] = 0;
-      highestBidID = bidID;
-      _bids[bidID] = Bid(bidder, value);
-      listSize = listSize + 1;
+      _prevBidIDs[highestBidID] = bidID; 
     }
+    _nextBidIDs[bidID] = highestBidID;
+    _prevBidIDs[bidID] = 0;
+    highestBidID = bidID;
+    _bids[bidID] = Bid(bidder, value);
+    queueSize = queueSize + 1;
   }
 
   function _updateBid(uint256 bidID, uint256 value) internal {
+    console.log('>upd');
     require(_ifBidExists(bidID), "No such bid ID");
     uint256 newBidValue = _bids[bidID].amount + value;
     Bid memory highestBid = getHighestBid();
@@ -48,17 +53,19 @@ contract LinkedBidsList {
     _prevBidIDs[_nextBidIDs[bidID]] = _prevBidIDs[bidID];
     _prevBidIDs[bidID] = 0;
     _nextBidIDs[bidID] = highestBidID;
-    highestBidID = bidID;
+    
     _bids[bidID].amount = newBidValue;
+
+    highestBidID = bidID;
   }
 
   function _removeBid(uint256 bidID) internal returns (uint256 amount){
-    require(highestBidID != bidID);
+    require(highestBidID != bidID, "Highest bid could not be removed");
     _prevBidIDs[_nextBidIDs[bidID]] = _prevBidIDs[bidID];
     _nextBidIDs[_prevBidIDs[bidID]] = _nextBidIDs[bidID];
     amount = _bids[bidID].amount;
     delete _bids[bidID];
-    listSize--;
+    queueSize--;
     return amount;
   }
 
@@ -66,52 +73,20 @@ contract LinkedBidsList {
     return _bids[bidID].bidder != address(0);
   }
 
-  function getHighestBid() internal view returns(Bid memory){
+  function getHighestBid() public view returns(Bid memory){
     return _bids[highestBidID];
   }
 
-  // function _verifyIndex(
-  //   address prevBidder,
-  //   uint256 newValue,
-  //   address nextBidder
-  // ) internal view returns (bool) {
-  //   return
-  //   (prevBidder == GUARD || balance[prevBidder] >= newValue) &&
-  //   (nextBidder == GUARD || newValue > balance[nextBidder]);
-  // }
-
-  // function _findIndex(uint256 newValue) internal view returns (address candidateAddress) {
-  //   candidateAddress = GUARD;
-  //   while (true) {
-  //     if (_verifyIndex(candidateAddress, newValue, _nextBidders[candidateAddress])) {
-  //       return candidateAddress;
-  //     }
-  //     candidateAddress = _nextBidders[candidateAddress];
-  //   }
-  // }
-
-  // function _isPrevBidder(address bidder, address prevBidder) internal view returns (bool) {
-  //   return _nextBidders[prevBidder] == bidder;
-  // }
-
-  // function _findPrevBidder(address bidder) internal view returns (address currentAddress) {
-  //   currentAddress = GUARD;
-  //   while (_nextBidders[currentAddress] != GUARD) {
-  //     if (_isPrevBidder(bidder, currentAddress)) {
-  //       return currentAddress;
-  //     }
-  //     currentAddress = _nextBidders[currentAddress];
-  //   }
-  // }
-
-  // function getTop(uint256 k) public view returns (address[] memory) {
-  //   require(k <= listSize, "LinkedList: top is bigger then list");
-  //   address[] memory bidderLists = new address[](k);
-  //   address currentAddress = _nextBidders[GUARD];
-  //   for (uint256 i = 0; i < k; ++i) {
-  //     bidderLists[i] = currentAddress;
-  //     currentAddress = _nextBidders[currentAddress];
-  //   }
-  //   return bidderLists;
-  // }
+  // TEST PURPOSES
+  function getFullQueue() public view returns(uint256[4] memory results) {
+    // uint256[] storage _results;
+    uint256 i = 0;
+    results[i] = highestBidID;
+    uint256 nextId = _nextBidIDs[highestBidID];
+    while(nextId>0){
+      i = i + 1;
+      results[i] = nextId;
+      nextId = _nextBidIDs[nextId];
+    }
+  }
 }
