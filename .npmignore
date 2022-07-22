@@ -1,0 +1,17 @@
+/scripts
+/tasks
+/test
+/coverage
+
+/artifacts
+/cache
+
+renovate.json
+hardhat.config.ts
+tsconfig.json
+tsconfig.test.json
+coverage.json
+
+.idea
+.vscode
+.github

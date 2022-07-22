@@ -1,11 +1,23 @@
-node_modules
+# Project
+/typechain-types
+/besu
+/cache
+/artifacts
+/coverage
+
+# IDE
+.idea
+.vscode
+
+# OS
+.DS_Store
+
+# NODE
+node_modules/
+npm-debug.log
+package-lock.json
+yarn.lock
+/report.*.json
+
 .env
-coverage
 coverage.json
-typechain
-typechain-types
-
-#Hardhat files
-cache
-artifacts
-
