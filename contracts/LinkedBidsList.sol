@@ -47,7 +47,7 @@ contract LinkedBidsList {
     require(_ifBidExists(bidID), "No such bid ID");
     uint256 newBidValue = _bids[bidID].amount + value;
     Bid memory highestBid = getHighestBid();
-    require(newBidValue > (highestBid.amount * MIN_BID_INCRESE_PERCENT) / 100, "Not enough bid value");
+    require(newBidValue > (highestBid.amount * MIN_BID_INCRESE_PERCENT) / 10000, "Not enough bid value");
 
     _nextBidIDs[_prevBidIDs[bidID]] = _nextBidIDs[bidID];
     _prevBidIDs[_nextBidIDs[bidID]] = _prevBidIDs[bidID];
