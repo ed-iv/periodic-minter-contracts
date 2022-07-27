@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.9;
-
+import "./StructArrayLib.sol";
 contract LinkedBidsList {
+    using StructArrayLib for StructArrayLib.Bids;
   struct Bid {
     address bidder;
     uint256 amount;
@@ -12,11 +13,12 @@ contract LinkedBidsList {
   uint256 constant MIN_BID_INCRESE_PERCENT = 500; // 5%
   uint256 constant MIN_BID_AMOUNT = 100000000000000; // 0.001 ETH
 
-  mapping(uint256 => uint256) private _nextBidIDs;
-  mapping(uint256 => uint256) private _prevBidIDs;
-  mapping(uint256 => Bid) internal _bids;
+  // mapping(uint256 => uint256) private _nextBidIDs;
+  // mapping(uint256 => uint256) private _prevBidIDs;
+  // mapping(uint256 => Bid) internal _bids;
+  StructArrayLib.Bids internal _bids;
 
-  uint256 internal highestBidID;
+  // uint256 internal highestBidID;
   uint256 public queueSize;
 
   // TODO
@@ -31,16 +33,13 @@ contract LinkedBidsList {
     address bidder
   ) internal {
     require(!_ifBidExists(bidID), "Bid ID already exists");
-    require(value >= _bids[highestBidID].amount, "Bid amount lower then highest");
+    require(value >= _bids[0].amount, "Bid amount lower then highest");
     require(value >= MIN_BID_AMOUNT, "Bid amount is low");
-    if (_bids[highestBidID].amount > 0) {
-      _prevBidIDs[highestBidID] = bidID;
-    }
-    _nextBidIDs[bidID] = highestBidID;
-    _prevBidIDs[bidID] = 0;
-    highestBidID = bidID;
-    _bids[bidID] = Bid(bidder, value);
-    queueSize = queueSize + 1;
+    
+    // highestBidID = bidID;
+    // _bids[bidID] = Bid(bidder, value, bidID);
+    _bids.pushBid(Bid(bidder, value, bidID));
+    // queueSize = queueSize + 1;
   }
 
   function _updateBid(uint256 bidID, uint256 value) internal {
@@ -49,14 +48,15 @@ contract LinkedBidsList {
     Bid memory highestBid = getHighestBid();
     require(newBidValue > (highestBid.amount * MIN_BID_INCRESE_PERCENT) / 10000, "Not enough bid value");
 
-    _nextBidIDs[_prevBidIDs[bidID]] = _nextBidIDs[bidID];
-    _prevBidIDs[_nextBidIDs[bidID]] = _prevBidIDs[bidID];
-    _prevBidIDs[bidID] = 0;
-    _nextBidIDs[bidID] = highestBidID;
-
+    // _nextBidIDs[_prevBidIDs[bidID]] = _nextBidIDs[bidID];
+    // _prevBidIDs[_nextBidIDs[bidID]] = _prevBidIDs[bidID];
+    // _prevBidIDs[bidID] = 0;
+    // _nextBidIDs[bidID] = highestBidID;
+    // update bid
+    // move to first
     _bids[bidID].amount = newBidValue;
 
-    highestBidID = bidID;
+    // highestBidID = bidID;
   }
 
   function _removeBid(uint256 bidID, bool setNewHighest) internal returns (uint256 amount) {
