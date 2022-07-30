@@ -7,17 +7,17 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "./LinkedBidsList.sol";
+import "./BidQueue.sol";
 import "./SignatureValidator.sol";
 import "./interfaces/IERC721Abstract.sol";
 
-contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, LinkedBidsList, SignatureValidator {
+contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, SignatureValidator {
   using Address for address;
 
   IERC721Abstract _factory;
-
+  uint256 private _total = 500;
   uint256 private _timestamp;
-  mapping(uint256 => string) private _urls;
+  // mapping(uint256 => string) private _urls;
 
   event CreateBid(uint256 bidId, address indexed account, uint256 amount);
   event UpdateBid(uint256 bidId, address indexed account, uint256 amount);
@@ -33,9 +33,8 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, LinkedBidsList
     _factory = IERC721Abstract(factory);
   }
 
-  function bid(
+  function addBid(
     bytes32 nonce,
-    uint256 bidId,
     string memory url,
     address signer,
     bytes calldata signature
@@ -44,42 +43,35 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, LinkedBidsList
 
     address account = _msgSender();
 
-    _verifySignature(nonce, account, bidId, url, msg.value, signer, signature);
+    _verifySignature(nonce, account, url, msg.value, signer, signature);
 
-    if (queueSize == 0) {
+    if (_getQueueSize() == 0) {
       _timestamp = block.timestamp + 86400;
     }
 
-    if (_ifBidExists(bidId)) {
-      emit UpdateBid(bidId, account, msg.value);
-      _updateBid(bidId, msg.value);
-    } else {
-      _urls[bidId] = url;
-      emit CreateBid(bidId, account, msg.value);
-      _addBid(bidId, msg.value, account);
-    }
+    uint256 bidId = _addBid(msg.value, account, url);
+    emit CreateBid(bidId, account, msg.value);
   }
 
   function mint() public {
-    require(_timestamp < block.timestamp, "Exchange: Not yet callable");
-    require(_total > 0, "Exchange: Limit exceeded");
+    require(_timestamp < block.timestamp, "Not yet callable");
+    require(_total > 0, "Limit exceeded");
 
-    Bid memory top = getHighestBid();
+    BidQueue.Bid memory topBid = _popHighestBid();
 
-    _removeBid(highestBidID, true);
+    // BidQueue.Bid bid = _popHighestBid();
     _total = _total - 1;
 
-    if (queueSize > 0) {
+    if (_getQueueSize() > 0) {
       _timestamp = block.timestamp + 86400;
     }
-
-    _factory.mint(top.bidder, _urls[highestBidID]);
+    _factory.mint(topBid.bidder, topBid.url);
   }
 
-  function revokeBid(uint256 bidId) external {
+  function revokeBid(uint256 bidId) external _ifBidExists(bidId) {
     address account = _msgSender();
-    require(_bids[bidId].bidder == account, "Exchange: Not an owner");
-    uint256 amount = _removeBid(bidId, false);
+    require(_getBidById(bidId).bidder == account, "Exchange: Not an owner");
+    uint256 amount = _revokeBid(bidId);
     emit RevokeBid(bidId, account, amount);
     (bool sent, ) = account.call{ value: amount, gas: 20317 }("");
     require(sent, "Exchange: Failed to send Ether");

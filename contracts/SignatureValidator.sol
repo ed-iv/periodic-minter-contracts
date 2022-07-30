@@ -10,14 +10,13 @@ contract SignatureValidator is EIP712 {
 
   mapping(bytes32 => bool) private _expired;
 
-  bytes32 private constant PERMIT_SIGNATURE = keccak256("EIP712(bytes32 nonce,address account,uint256 bidId,string url,uint256 price)");
+  bytes32 private constant PERMIT_SIGNATURE = keccak256("EIP712(bytes32 nonce,address account,string url,uint256 price)");
 
   constructor(string memory name) EIP712(name, "1.0.0") {}
 
   function _verifySignature(
     bytes32 nonce,
     address account,
-    uint256 bidId,
     string memory url,
     uint256 price,
     address signer,
@@ -26,18 +25,17 @@ contract SignatureValidator is EIP712 {
     require(!_expired[nonce], "SignatureValidator: Expired signature");
     _expired[nonce] = true;
 
-    bool isVerified = _verify(signer, _hash(nonce, account, bidId, url, price), signature);
+    bool isVerified = _verify(signer, _hash(nonce, account, url, price), signature);
     require(isVerified, "SignatureValidator: Invalid signature");
   }
 
   function _hash(
     bytes32 nonce,
     address account,
-    uint256 bidId,
     string memory url,
     uint256 price
   ) private view returns (bytes32) {
-    return _hashTypedDataV4(keccak256(abi.encode(PERMIT_SIGNATURE, nonce, account, bidId, keccak256(bytes(url)), price)));
+    return _hashTypedDataV4(keccak256(abi.encode(PERMIT_SIGNATURE, nonce, account, keccak256(bytes(url)), price)));
   }
 
   function _verify(
