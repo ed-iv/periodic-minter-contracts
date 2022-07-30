@@ -17,6 +17,7 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
   IERC721Abstract _factory;
   uint256 private _total = 500;
   uint256 private _timestamp;
+  address private _owner;
   // mapping(uint256 => string) private _urls;
 
   event CreateBid(uint256 bidId, address indexed account, uint256 amount);
@@ -25,6 +26,7 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
   event Withdrawn(address indexed account, uint256 amount);
 
   constructor(string memory name) SignatureValidator(name) {
+    _owner = _msgSender();
     _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
   }
 
@@ -36,30 +38,28 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
   function addBid(
     bytes32 nonce,
     string memory url,
-    address signer,
     bytes calldata signature
-  ) external payable whenNotPaused {
+  ) external payable whenNotPaused returns (uint256 bidId){
 
     address account = _msgSender();
 
-    _verifySignature(nonce, account, url, msg.value, signer, signature);
+    _verifySignature(nonce, account, url, msg.value, _owner, signature);
 
     if (getQueueSize() == 0) {
       _timestamp = block.timestamp + 86400;
     }
 
-    uint256 bidId = _addBid(msg.value, account, url);
+    bidId = _pushNewBid(msg.value, account, url);
     emit CreateBid(bidId, account, msg.value);
   }
 
   function updateBid(
     bytes32 nonce,
     uint256 bidId,
-    address signer,
     bytes calldata signature
   ) external payable whenNotPaused {
 
-    _verifySignatureUpdateRevoke(nonce, bidId,  signer, signature);
+    _verifySignatureUpdateRevoke(nonce, bidId,  _owner, signature);
 
     uint256 newAmount = _updateBid(bidId, msg.value);
     emit UpdateBid(bidId, newAmount, msg.value);
@@ -72,13 +72,16 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
 
     BidQueue.Bid memory topBid = _popHighestBid();
 
-    // BidQueue.Bid bid = _popHighestBid();
     _total = _total - 1;
 
     if (getQueueSize() > 0) {
       _timestamp = block.timestamp + 86400;
     }
     _factory.mint(topBid.bidder, topBid.url);
+
+    if(_total == 0){
+      _releaseBids();
+    }
   }
 
   function revokeBid(uint256 bidId) external _ifBidExists(bidId) {

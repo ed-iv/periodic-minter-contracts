@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "hardhat/console.sol";
 
 contract BidQueue {
   using Counters for Counters.Counter;
@@ -41,6 +42,13 @@ contract BidQueue {
     _bids[0].valid = false;
   }
 
+  function _pushNewBid(uint256 amount, address bidder, string memory url) internal returns (uint256 id) {
+    id = _addBid(amount, bidder, url);
+    _bidsCounter.increment();
+    _bidsSize.increment();
+  }
+  
+  // internal 
   function _addBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
     uint256 id = _bidsCounter.current();
     Bid memory highestBid = getHighestBid();
@@ -49,10 +57,9 @@ contract BidQueue {
     require(amount >= highestBidAmount * _minBidIncrease / 10000, "BidQueueLib: Bid should be 5% higher");
     _addressBids[bidder].push(id);
     _highestBidId = id;
+    _indexes[id] = _bidsCounter.current();
     // self._addressBidsCounter[bidder].increment();
     _bids.push(Bid(bidder, id, url, amount, true, true));
-    _bidsCounter.increment();
-    _bidsSize.increment();
     return id;
   }
 
@@ -69,6 +76,8 @@ contract BidQueue {
     bid = _getBidById(_highestBidId);
     // bid.valid = false;
     delete _indexes[_highestBidId];
+    _bidsSize.decrement();
+    _highestBidId = _bids[_bidsSize.current()].id;
     _bids.pop();
   }
 
@@ -80,7 +89,7 @@ contract BidQueue {
   }
 
   function getHighestBid() public view returns (Bid memory){
-    return _bids[_bidsCounter.current()-1];
+    return _bids[_indexes[_highestBidId]];
   }
 
   function _getBidById(uint256 bidId) internal view returns (Bid storage){
@@ -98,6 +107,10 @@ contract BidQueue {
     delete _indexes[bidId];
   }
 
+  // allow to revoke all bids including highest
+  function _releaseBids() internal {
+    _highestBidId = 0;
+  }
   // function _bidExists(uint256 bidId) internal view returns (bool) {
   //   return _indexes[bidId] > 0 && _bids[_indexes[bidId]].exists;
   // }
