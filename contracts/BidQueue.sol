@@ -21,7 +21,7 @@ contract BidQueue {
   }
   
   uint256 private _minBidIncrease = 500;
-  uint256 private _minBid = 1000000000000000; // 0.001 eth
+  uint256 private _minBid = 100000000000000; // 0.0001 eth
 
   Bid[] _bids;
   Counters.Counter private _bidsCounter;
@@ -39,7 +39,7 @@ contract BidQueue {
 
   function _addBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
     uint256 id = _bidsCounter.current();
-    Bid storage highestBid = _getHighestBid();
+    Bid memory highestBid = getHighestBid();
     uint256 highestBidAmount = highestBid.amount;
     require(amount > _minBid, "BidQueue: Bid should be higher than minimum");
     require(amount >= highestBidAmount * _minBidIncrease / 10000, "BidQueueLib: Bid should be 5% higher");
@@ -74,7 +74,7 @@ contract BidQueue {
     _removeBid(bidId);
   }
 
-  function _getHighestBid() internal view returns (Bid storage){
+  function getHighestBid() public view returns (Bid memory){
     return _bids[_bidsCounter.current()-1];
   }
 
@@ -82,7 +82,7 @@ contract BidQueue {
     return _bids[_indexes[bidId]];
   }
 
-  function _getQueueSize() internal view returns(uint256) {
+  function getQueueSize() public view returns(uint256) {
     return _bidsSize.current();
   }
   

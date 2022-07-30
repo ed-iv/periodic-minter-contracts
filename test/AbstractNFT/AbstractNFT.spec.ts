@@ -24,7 +24,7 @@ describe("AbstractNFT", function () {
   let stranger: SignerWithAddress;
   let network: Network;
 
-  const generateSignature = (account: SignerWithAddress, multiplier: number, bidId: number, customNonce = nonce) => {
+  const generateSignature = (account: SignerWithAddress, multiplier: number, customNonce = nonce) => {
     return owner._signTypedData(
       // Domain
       {
@@ -38,7 +38,6 @@ describe("AbstractNFT", function () {
         EIP712: [
           { name: "nonce", type: "bytes32" },
           { name: "account", type: "address" },
-          { name: "bidId", type: "uint256" },
           { name: "url", type: "string" },
           { name: "price", type: "uint256" },
         ],
@@ -47,7 +46,6 @@ describe("AbstractNFT", function () {
       {
         nonce: customNonce,
         account: account.address,
-        bidId,
         url: baseTokenURI,
         price: amount * multiplier,
       },
@@ -78,11 +76,11 @@ describe("AbstractNFT", function () {
 
   describe("bid (new)", function () {
     it("should make first bid", async function () {
-      const signature = await generateSignature(receiver, 2, 1);
+      const signature = await generateSignature(receiver, 2);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce, 1, baseTokenURI, owner.address, signature, { value: amount * 2 });
+        .addBid(nonce, baseTokenURI, owner.address, signature, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
@@ -92,7 +90,7 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(receiver.address);
       expect(highest.amount).to.equal(amount * 2);
 
-      const queueSize = await abstractInstance.queueSize();
+      const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(1);
     });
 
@@ -100,21 +98,21 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 3, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 3, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
@@ -124,7 +122,7 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(stranger.address);
       expect(highest.amount).to.equal(amount * 3);
 
-      const queueSize = await abstractInstance.queueSize();
+      const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(2);
     });
 
@@ -132,21 +130,21 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 2, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 2, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount * 2 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 2 });
 
       await expect(tx2).to.be.revertedWith(`Bid amount lower then highest`);
     });
@@ -155,31 +153,31 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 1, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 1, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount });
 
       await expect(tx2).to.be.revertedWith(`Bid amount lower then highest`);
     });
 
     it("should fail: Expired signature", async function () {
-      const signature = await generateSignature(receiver, 2, 1);
+      const signature = await generateSignature(receiver, 2);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce, 1, baseTokenURI, owner.address, signature, { value: amount * 2 });
+        .addBid(nonce, baseTokenURI, owner.address, signature, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
@@ -187,27 +185,27 @@ describe("AbstractNFT", function () {
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce, 1, baseTokenURI, owner.address, signature, { value: amount * 2 });
+        .addBid(nonce, baseTokenURI, owner.address, signature, { value: amount * 2 });
 
       await expect(tx2).to.be.revertedWith(`SignatureValidator: Expired signature`);
     });
 
     it("should fail: Invalid signature", async function () {
-      const signature = await generateSignature(receiver, 2, 1);
+      const signature = await generateSignature(receiver, 2);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce, 1, baseTokenURI, owner.address, signature, { value: 0 });
+        .addBid(nonce, baseTokenURI, owner.address, signature, { value: 0 });
 
       await expect(tx1).to.be.revertedWith(`SignatureValidator: Invalid signature`);
     });
 
     it("should fail: Value is too low", async function () {
-      const signature = await generateSignature(receiver, 1 / 2, 1);
+      const signature = await generateSignature(receiver, 1 / 2);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce, 1, baseTokenURI, owner.address, signature, { value: amount / 2 });
+        .addBid(nonce, baseTokenURI, owner.address, signature, { value: amount / 2 });
 
       await expect(tx1).to.be.revertedWith(`Bid amount is low`);
     });
@@ -218,21 +216,21 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(receiver, 10, 1, nonce2);
+      const signature2 = await generateSignature(receiver, 10, nonce2);
 
       const tx2 = abstractInstance
         .connect(receiver)
-        .bid(nonce2, 1, baseTokenURI, owner.address, signature2, { value: amount * 10 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 10 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "UpdateBid")
@@ -242,7 +240,7 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(receiver.address);
       expect(highest.amount).to.equal(amount * 12);
 
-      const queueSize = await abstractInstance.queueSize();
+      const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(1);
     });
 
@@ -250,21 +248,21 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 2, 1, nonce2);
+      const signature2 = await generateSignature(stranger, 2, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 1, baseTokenURI, owner.address, signature2, { value: amount * 2 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 2 });
 
       await expect(tx2).to.be.revertedWith(`Not enough bid value`);
     });
@@ -275,21 +273,21 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 3, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 3, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
@@ -305,7 +303,7 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(stranger.address);
       expect(highest.amount).to.equal(amount * 3);
 
-      const queueSize = await abstractInstance.queueSize();
+      const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(1);
     });
 
@@ -314,31 +312,31 @@ describe("AbstractNFT", function () {
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 3, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 3, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
 
-      const signature3 = await generateSignature(owner, 4, 3, nonce3);
+      const signature3 = await generateSignature(owner, 4, nonce3);
 
       const tx3 = abstractInstance
         .connect(owner)
-        .bid(nonce3, 3, baseTokenURI, owner.address, signature3, { value: amount * 4 });
+        .addBid(nonce3, baseTokenURI, owner.address, signature3, { value: amount * 4 });
 
       await expect(tx3)
         .to.emit(abstractInstance, "CreateBid")
@@ -360,7 +358,7 @@ describe("AbstractNFT", function () {
 
       await expect(tx5).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, stranger.address, 2);
 
-      const queueSize = await abstractInstance.queueSize();
+      const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(1);
 
       const tx6 = abstractInstance.connect(receiver).revokeBid(1);
@@ -374,21 +372,21 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 3, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 3, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
@@ -403,21 +401,21 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 3, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 3, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
@@ -431,11 +429,11 @@ describe("AbstractNFT", function () {
 
   describe("mint", function () {
     it("should mint after first bid", async function () {
-      const signature = await generateSignature(receiver, 2, 1);
+      const signature = await generateSignature(receiver, 2);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce, 1, baseTokenURI, owner.address, signature, { value: amount * 2 });
+        .addBid(nonce, baseTokenURI, owner.address, signature, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
@@ -454,7 +452,7 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(ethers.constants.AddressZero);
       expect(highest.amount).to.equal(0);
 
-      const queueSize = await abstractInstance.queueSize();
+      const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(0);
     });
 
@@ -462,21 +460,21 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 3, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 3, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
@@ -495,7 +493,7 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(receiver.address);
       expect(highest.amount).to.equal(amount * 2);
 
-      const queueSize = await abstractInstance.queueSize();
+      const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(1);
     });
 
@@ -503,21 +501,21 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 3, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 3, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
@@ -539,7 +537,7 @@ describe("AbstractNFT", function () {
 
       await expect(tx4).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, receiver.address, 2);
 
-      const queueSize = await abstractInstance.queueSize();
+      const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(0);
     });
 
@@ -547,21 +545,21 @@ describe("AbstractNFT", function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 3, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 3, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
@@ -577,31 +575,31 @@ describe("AbstractNFT", function () {
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
-      const signature1 = await generateSignature(receiver, 2, 1, nonce1);
+      const signature1 = await generateSignature(receiver, 2, nonce1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce1, 1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(stranger, 3, 2, nonce2);
+      const signature2 = await generateSignature(stranger, 3, nonce2);
 
       const tx2 = abstractInstance
         .connect(stranger)
-        .bid(nonce2, 2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
+        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
 
-      const signature3 = await generateSignature(owner, 4, 3, nonce3);
+      const signature3 = await generateSignature(owner, 4, nonce3);
 
       const tx3 = abstractInstance
         .connect(owner)
-        .bid(nonce3, 3, baseTokenURI, owner.address, signature3, { value: amount * 4 });
+        .addBid(nonce3, baseTokenURI, owner.address, signature3, { value: amount * 4 });
 
       await expect(tx3)
         .to.emit(abstractInstance, "CreateBid")
@@ -641,11 +639,11 @@ describe("AbstractNFT", function () {
     });
 
     it("should withdraw", async function () {
-      const signature = await generateSignature(receiver, 1, 1);
+      const signature = await generateSignature(receiver, 1);
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .bid(nonce, 1, baseTokenURI, owner.address, signature, { value: amount });
+        .addBid(nonce, baseTokenURI, owner.address, signature, { value: amount });
 
       await expect(tx1).to.emit(abstractInstance, "CreateBid").withArgs(1, receiver.address, amount);
 

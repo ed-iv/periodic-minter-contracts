@@ -45,7 +45,7 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
 
     _verifySignature(nonce, account, url, msg.value, signer, signature);
 
-    if (_getQueueSize() == 0) {
+    if (getQueueSize() == 0) {
       _timestamp = block.timestamp + 86400;
     }
 
@@ -62,7 +62,7 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
     // BidQueue.Bid bid = _popHighestBid();
     _total = _total - 1;
 
-    if (_getQueueSize() > 0) {
+    if (getQueueSize() > 0) {
       _timestamp = block.timestamp + 86400;
     }
     _factory.mint(topBid.bidder, topBid.url);

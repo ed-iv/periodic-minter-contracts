@@ -9,4 +9,4 @@ export const baseTokenURI = "http://localhost:3011/metadata"; // no trailing sla
 export const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const MINTER_ROLE = ethers.utils.id("MINTER_ROLE");
 
-export const amount = 100000000000000;
+export const amount = 110000000000000;
