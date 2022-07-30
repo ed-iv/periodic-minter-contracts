@@ -20,7 +20,7 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
   // mapping(uint256 => string) private _urls;
 
   event CreateBid(uint256 bidId, address indexed account, uint256 amount);
-  event UpdateBid(uint256 bidId, address indexed account, uint256 amount);
+  event UpdateBid(uint256 bidId, uint256 newAmount, uint256 addition);
   event RevokeBid(uint256 bidId, address indexed account, uint256 amount);
   event Withdrawn(address indexed account, uint256 amount);
 
@@ -39,7 +39,6 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
     address signer,
     bytes calldata signature
   ) external payable whenNotPaused {
-    require(hasRole(DEFAULT_ADMIN_ROLE, signer), "Exchange: Wrong signer");
 
     address account = _msgSender();
 
@@ -52,6 +51,20 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
     uint256 bidId = _addBid(msg.value, account, url);
     emit CreateBid(bidId, account, msg.value);
   }
+
+  function updateBid(
+    bytes32 nonce,
+    uint256 bidId,
+    address signer,
+    bytes calldata signature
+  ) external payable whenNotPaused {
+
+    _verifySignatureUpdateRevoke(nonce, bidId,  signer, signature);
+
+    uint256 newAmount = _updateBid(bidId, msg.value);
+    emit UpdateBid(bidId, newAmount, msg.value);
+  }
+
 
   function mint() public {
     require(_timestamp < block.timestamp, "Not yet callable");

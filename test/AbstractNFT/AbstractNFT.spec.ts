@@ -35,7 +35,7 @@ describe("AbstractNFT", function () {
       },
       // Types
       {
-        EIP712: [
+        ADDBID: [
           { name: "nonce", type: "bytes32" },
           { name: "account", type: "address" },
           { name: "url", type: "string" },
@@ -48,6 +48,29 @@ describe("AbstractNFT", function () {
         account: account.address,
         url: baseTokenURI,
         price: amount * multiplier,
+      },
+    );
+  };
+  const generateSignatureUpdateRevoke = (bidId: number, customNonce = nonce) => {
+    return owner._signTypedData(
+      // Domain
+      {
+        name: tokenName,
+        version: "1.0.0",
+        chainId: network.chainId,
+        verifyingContract: abstractInstance.address,
+      },
+      // Types
+      {
+        UPDATEREVOKE: [
+          { name: "nonce", type: "bytes32" },
+          { name: "bidId", type: "uint256" },
+        ],
+      },
+      // Value
+      {
+        nonce: customNonce,
+        price: bidId,
       },
     );
   };
@@ -207,7 +230,7 @@ describe("AbstractNFT", function () {
         .connect(receiver)
         .addBid(nonce, baseTokenURI, owner.address, signature, { value: amount / 2 });
 
-      await expect(tx1).to.be.revertedWith(`Bid amount is low`);
+      await expect(tx1).to.be.revertedWith(`BidQueue: Bid should be higher than minimum`);
     });
   });
 
@@ -220,17 +243,17 @@ describe("AbstractNFT", function () {
 
       const tx1 = abstractInstance
         .connect(receiver)
-        .addBid(nonce1, baseTokenURI, owner.address, signature1, { value: amount * 2 });
+        .addBid(nonce1, baseTokenURI, receiver.address, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const signature2 = await generateSignature(receiver, 10, nonce2);
+      const signature2 = await generateSignatureUpdateRevoke(1, nonce2);
 
       const tx2 = abstractInstance
         .connect(receiver)
-        .addBid(nonce2, baseTokenURI, owner.address, signature2, { value: amount * 10 });
+        .updateBid(nonce2, 1, receiver.address, signature2, { value: amount * 10 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "UpdateBid")

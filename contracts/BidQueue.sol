@@ -10,6 +10,10 @@ contract BidQueue {
     require(_indexes[bidId] > 0 && _bids[_indexes[bidId]].exists, "BidQueue: Bid not exists");
     _;
   }
+  modifier _ifBidOwner(uint256 bidId) {
+    require(_getBidById(bidId).bidder == msg.sender, "BidQueue: Restrict to bids owner only");
+    _;
+  }
 
   struct Bid {
         address bidder;
@@ -68,10 +72,11 @@ contract BidQueue {
     _bids.pop();
   }
 
-  function _updateBid(uint256 bidId, uint256 amount) internal  _ifBidExists(bidId){
+  function _updateBid(uint256 bidId, uint256 amount) internal  _ifBidExists(bidId) _ifBidOwner(bidId) returns(uint256) {
     Bid storage bid = _getBidById(bidId);
     _addBid(bid.amount + amount, bid.bidder, bid.url);
     _removeBid(bidId);
+    return bid.amount + amount;
   }
 
   function getHighestBid() public view returns (Bid memory){
