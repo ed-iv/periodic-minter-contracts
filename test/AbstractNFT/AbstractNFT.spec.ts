@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable no-console */
 import { expect } from "chai";
 import { ethers, web3 } from "hardhat";
@@ -143,6 +144,12 @@ describe("AbstractNFT", function () {
 
       const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(2);
+
+      const bidList = await abstractInstance.connect(receiver).getWalletBids();
+      expect(bidList.map(n => n.toNumber())).to.deep.equal([1]);
+
+      const bidList2 = await abstractInstance.connect(stranger).getWalletBids();
+      expect(bidList2.map(n => n.toNumber())).to.deep.equal([2]);
     });
 
     it("should fail: Bid amount lower then highest (equal)", async function () {

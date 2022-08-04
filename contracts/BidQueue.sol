@@ -42,6 +42,19 @@ contract BidQueue {
     _bids[0].valid = false;
   }
 
+  function getHighestBid() public view returns (Bid memory){
+    return _bids[_indexes[_highestBidId]];
+  }
+
+  function getQueueSize() public view returns(uint256) {
+    return _bidsSize.current();
+  }
+  
+  function getWalletBids() public view returns(uint256[] memory) {
+    return _addressBids[msg.sender];
+  }
+  // internals
+
   function _pushNewBid(uint256 amount, address bidder, string memory url) internal returns (uint256 id) {
     id = _addBid(amount, bidder, url);
     _bidsCounter.increment();
@@ -88,17 +101,13 @@ contract BidQueue {
     return bid.amount + amount;
   }
 
-  function getHighestBid() public view returns (Bid memory){
-    return _bids[_indexes[_highestBidId]];
-  }
+  
 
   function _getBidById(uint256 bidId) internal view returns (Bid storage){
     return _bids[_indexes[bidId]];
   }
 
-  function getQueueSize() public view returns(uint256) {
-    return _bidsSize.current();
-  }
+ 
   
   function _removeBid(uint256 bidId) internal _ifBidExists(bidId) {
     require(bidId != _highestBidId, "BidQueue: Highest bid could not be revoked");
