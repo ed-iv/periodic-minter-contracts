@@ -50,8 +50,12 @@ contract BidQueue {
     return _bidsSize.current();
   }
   
-  function getWalletBids() public view returns(uint256[] memory) {
+  function getBidList() public view returns(uint256[] memory) {
     return _addressBids[msg.sender];
+  }
+
+  function getBidInfo(uint256 bidId) public view _ifBidOwner(bidId) returns(Bid memory bid) {
+    bid = _getBidById(bidId);
   }
   // internals
 
