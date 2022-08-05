@@ -145,10 +145,10 @@ describe("AbstractNFT", function () {
       const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(2);
 
-      const bidList = await abstractInstance.connect(receiver).getWalletBids();
+      const bidList = await abstractInstance.connect(receiver).getBidList();
       expect(bidList.map(n => n.toNumber())).to.deep.equal([1]);
 
-      const bidList2 = await abstractInstance.connect(stranger).getWalletBids();
+      const bidList2 = await abstractInstance.connect(stranger).getBidList();
       expect(bidList2.map(n => n.toNumber())).to.deep.equal([2]);
     });
 
