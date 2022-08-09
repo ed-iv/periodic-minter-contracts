@@ -239,7 +239,7 @@ describe("AbstractNFT", function () {
       const tx2 = abstractInstance.connect(receiver).updateBid(nonce2, bidId, signature2, { value: amount * 10 });
       await expect(tx2)
         .to.emit(abstractInstance, "UpdateBid")
-        .withArgs(bidId, amount * 12, amount * 10);
+        .withArgs(bidId, await receiver.getAddress(), amount * 12, amount * 10);
 
       const highest = await abstractInstance.getHighestBid();
 
@@ -293,7 +293,9 @@ describe("AbstractNFT", function () {
       const bidList1 = await abstractInstance.connect(receiver).getBidList();
       expect(bidList1.map(n => n.toNumber())).to.deep.equal([1]);
 
-      const tx3 = abstractInstance.connect(receiver).revokeBid(1);
+      const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+      const signature3 = await generateSignatureUpdateRevoke(1, nonce3);
+      const tx3 = abstractInstance.connect(receiver).revokeBid(nonce3, 1, signature3);
 
       await expect(tx3)
         .to.emit(abstractInstance, "RevokeBid")
@@ -385,7 +387,9 @@ describe("AbstractNFT", function () {
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
 
-      const tx3 = abstractInstance.connect(stranger).revokeBid(2);
+      const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+      const signature3 = await generateSignatureUpdateRevoke(2, nonce3);
+      const tx3 = abstractInstance.connect(stranger).revokeBid(nonce3, 2, signature3);
 
       await expect(tx3).to.be.revertedWith(`BidQueue: Highest bid could not be revoked`);
     });
@@ -410,7 +414,9 @@ describe("AbstractNFT", function () {
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
 
-      const tx3 = abstractInstance.connect(stranger).revokeBid(1);
+      const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+      const signature3 = await generateSignatureUpdateRevoke(1, nonce3);
+      const tx3 = abstractInstance.connect(stranger).revokeBid(nonce3, 1, signature3);
 
       await expect(tx3).to.be.revertedWith(`Exchange: Not an owner`);
     });

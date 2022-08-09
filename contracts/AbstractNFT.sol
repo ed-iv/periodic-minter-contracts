@@ -21,7 +21,7 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
   // mapping(uint256 => string) private _urls;
 
   event CreateBid(uint256 bidId, address indexed account, uint256 amount);
-  event UpdateBid(uint256 bidId, uint256 newAmount, uint256 addition);
+  event UpdateBid(uint256 bidId, address indexed account, uint256 newAmount, uint256 addition);
   event RevokeBid(uint256 bidId, address indexed account, uint256 amount);
   event Withdrawn(address indexed account, uint256 amount);
 
@@ -62,7 +62,7 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
     _verifySignatureUpdateRevoke(nonce, bidId,  _owner, signature);
 
     uint256 newAmount = _updateBid(bidId, msg.value);
-    emit UpdateBid(bidId, newAmount, msg.value);
+    emit UpdateBid(bidId, msg.sender, newAmount, msg.value);
   }
 
 
@@ -84,7 +84,12 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
     }
   }
 
-  function revokeBid(uint256 bidId) external _ifBidExists(bidId) {
+  function revokeBid(
+    bytes32 nonce,
+    uint256 bidId,
+    bytes calldata signature
+  ) external _ifBidExists(bidId) {
+    _verifySignatureUpdateRevoke(nonce, bidId,  _owner, signature);
     address account = _msgSender();
     require(_getBidById(bidId).bidder == account, "Exchange: Not an owner");
     uint256 amount = _revokeBid(bidId);
