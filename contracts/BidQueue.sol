@@ -12,6 +12,7 @@ contract BidQueue {
     _;
   }
   modifier _ifBidOwner(uint256 bidId) {
+    require(_getBidById(bidId).bidder != address(0), "BidQueue: Wrong bid ID");
     require(_getBidById(bidId).bidder == msg.sender, "BidQueue: Restrict to bids owner only");
     _;
   }
@@ -53,17 +54,47 @@ contract BidQueue {
   
   function getBidList() public view returns(uint256[] memory bids) {
     uint256 index = 0;
-    uint256 addressBidsAmount = _addressValidBidsAmount[msg.sender].current();
-    bids = new uint256[](addressBidsAmount);
+    // calc the length    
     for(uint256 i=0; i<_addressBids[msg.sender].length; i++){
-      uint256 id  = _addressBids[msg.sender][i];
+      uint256 id = _addressBids[msg.sender][i];
+      
       Bid memory bid = _getBidById(id);
       if(bid.valid == true){
-        bids[index] = id;
         index = index + 1;
       }
     }
+    //set bids
+    bids = new uint256[](index);
+    index = 0;
+    
+    for(uint256 i=0; i<_addressBids[msg.sender].length; i++){
+      uint256 id = _addressBids[msg.sender][i];
+      
+      Bid memory bid = _getBidById(id);
+      
+      if(bid.valid == true){
+        bids[index] = id;
+        // index = index + 1;
+      }
+    }
   }
+
+  // function getBidList() public view returns(uint256[] memory bids) {
+  //   uint256 index = 0;
+  //   uint256 addressBidsAmount = _addressValidBidsAmount[msg.sender].current();
+  //   bids = new uint256[](addressBidsAmount);
+  //   console.log("--", _addressBids[msg.sender].length);
+  //   for(uint256 i=0; i<_addressBids[msg.sender].length; i++){
+  //     uint256 id = _addressBids[msg.sender][i];
+      
+  //     Bid memory bid = _getBidById(id);
+  //     console.log("id", id, bid.valid);
+  //     if(bid.valid == true){
+  //       bids[index] = id;
+  //       index = index + 1;
+  //     }
+  //   }
+  // }
 
   function getBidInfo(uint256 bidId) public view _ifBidOwner(bidId) returns(Bid memory bid) {
     bid = _getBidById(bidId);
@@ -81,6 +112,9 @@ contract BidQueue {
   }
 
   function _pushNewBid(uint256 amount, address bidder, string memory url) internal returns (uint256 id) {
+    uint256 minBet = _getMinBid();
+    require(amount > _minBid, "BidQueue: Bid should be higher than minimum");
+    require(amount >= minBet, "BidQueue: Bid should be 5% higher");
     id = _addBid(amount, bidder, url);
     _bidsCounter.increment();
     _bidsSize.increment();
@@ -88,9 +122,6 @@ contract BidQueue {
   
   function _addBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
     uint256 id = _bidsCounter.current();
-    uint256 minBet = _getMinBid();
-    require(amount > _minBid, "BidQueue: Bid should be higher than minimum");
-    require(amount >= minBet, "BidQueue: Bid should be 5% higher");
     _addressBids[bidder].push(id);
     _addressValidBidsAmount[bidder].increment();
     _highestBidId = id;
@@ -113,7 +144,7 @@ contract BidQueue {
     require(_highestBidId > 0, "BidQueue: Highest bid could not be revoked");
     bid = _getBidById(_highestBidId);
     // bid.valid = false;
-    delete _indexes[_highestBidId];
+    // delete _indexes[_highestBidId];
     _bidsSize.decrement();
     _highestBidId = _bids[_bidsSize.current()].id;
     _bids.pop();
@@ -121,8 +152,8 @@ contract BidQueue {
 
   function _updateBid(uint256 bidId, uint256 amount) internal  _ifBidExists(bidId) _ifBidOwner(bidId) returns(uint256) {
     Bid storage bid = _getBidById(bidId);
-    _addBid(bid.amount + amount, bid.bidder, bid.url);
-    _removeBid(bidId);
+    _pushNewBid(bid.amount + amount, bid.bidder, bid.url);
+    _revokeBid(bidId);
     return bid.amount + amount;
   }
 
@@ -138,24 +169,11 @@ contract BidQueue {
     require(bidId != _highestBidId, "BidQueue: Highest bid could not be revoked");
     Bid storage bid = _getBidById(bidId);
     bid.valid = false;
-    
-        // if (index >= array.length) return;
-
-        // for (uint i = index; i<array.length-1; i++){
-        //     array[i] = array[i+1];
-        // }
-        // delete array[array.length-1];
-        // array.length--;
-        // return array;
-    
-    delete _indexes[bidId];
+    // delete _indexes[bidId];
   }
 
   // allow to revoke all bids including highest
   function _releaseBids() internal {
     _highestBidId = 0;
   }
-  // function _bidExists(uint256 bidId) internal view returns (bool) {
-  //   return _indexes[bidId] > 0 && _bids[_indexes[bidId]].exists;
-  // }
 } 
