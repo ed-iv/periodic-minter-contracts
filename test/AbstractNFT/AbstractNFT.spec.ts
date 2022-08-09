@@ -290,6 +290,8 @@ describe("AbstractNFT", function () {
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
+      const bidList1 = await abstractInstance.connect(receiver).getBidList();
+      expect(bidList1.map(n => n.toNumber())).to.deep.equal([1]);
 
       const tx3 = abstractInstance.connect(receiver).revokeBid(1);
 
@@ -304,8 +306,8 @@ describe("AbstractNFT", function () {
       const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(1);
 
-      const bidList = await abstractInstance.connect(receiver).getBidList();
-      expect(bidList.map(n => n.toNumber())).to.deep.equal([1]);
+      const bidList2 = await abstractInstance.connect(receiver).getBidList();
+      expect(bidList2.map(n => n.toNumber())).to.deep.equal([]);
     });
 
     // it("should revoke last bid after auction finished", async function () {

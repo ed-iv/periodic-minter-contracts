@@ -33,6 +33,7 @@ contract BidQueue {
   Counters.Counter private _bidsSize;
   mapping(uint256 => uint256) private  _indexes;
   mapping(address => uint256[]) private  _addressBids;
+  mapping(address => Counters.Counter) private  _addressValidBidsAmount;
   uint256 private _highestBidId;
 
   constructor(){
@@ -50,8 +51,18 @@ contract BidQueue {
     return _bidsSize.current();
   }
   
-  function getBidList() public view returns(uint256[] memory) {
-    return _addressBids[msg.sender];
+  function getBidList() public view returns(uint256[] memory bids) {
+    uint256 index = 0;
+    uint256 addressBidsAmount = _addressValidBidsAmount[msg.sender].current();
+    bids = new uint256[](addressBidsAmount);
+    for(uint256 i=0; i<_addressBids[msg.sender].length; i++){
+      uint256 id  = _addressBids[msg.sender][i];
+      Bid memory bid = _getBidById(id);
+      if(bid.valid == true){
+        bids[index] = id;
+        index = index + 1;
+      }
+    }
   }
 
   function getBidInfo(uint256 bidId) public view _ifBidOwner(bidId) returns(Bid memory bid) {
@@ -76,6 +87,7 @@ contract BidQueue {
     require(amount > _minBid, "BidQueue: Bid should be higher than minimum");
     require(amount >= minBet, "BidQueue: Bid should be 5% higher");
     _addressBids[bidder].push(id);
+    _addressValidBidsAmount[bidder].increment();
     _highestBidId = id;
     _indexes[id] = _bidsCounter.current();
     // self._addressBidsCounter[bidder].increment();
@@ -88,6 +100,7 @@ contract BidQueue {
     amount = bid.amount;
     _bidsSize.decrement();
     _removeBid(bidId);
+    _addressValidBidsAmount[bid.bidder].decrement();
     return amount;
   }
 
@@ -120,6 +133,16 @@ contract BidQueue {
     require(bidId != _highestBidId, "BidQueue: Highest bid could not be revoked");
     Bid storage bid = _getBidById(bidId);
     bid.valid = false;
+    
+        // if (index >= array.length) return;
+
+        // for (uint i = index; i<array.length-1; i++){
+        //     array[i] = array[i+1];
+        // }
+        // delete array[array.length-1];
+        // array.length--;
+        // return array;
+    
     delete _indexes[bidId];
   }
 
