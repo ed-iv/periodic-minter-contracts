@@ -113,7 +113,7 @@ contract BidQueue {
 
   function _pushNewBid(uint256 amount, address bidder, string memory url) internal returns (uint256 id) {
     uint256 minBet = _getMinBid();
-    require(amount >=, "BidQueue: Bid should be higher than minimum");
+    require(amount >= _minBid, "BidQueue: Bid should be higher than minimum");
     require(amount >= minBet, "BidQueue: Bid should be 5% higher");
     id = _addBid(amount, bidder, url);
     _bidsCounter.increment();
