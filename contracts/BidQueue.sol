@@ -71,7 +71,7 @@ contract BidQueue {
     Bid memory highestBid = getHighestBid();
     uint256 highestBidAmount = highestBid.amount;
     require(amount > _minBid, "BidQueue: Bid should be higher than minimum");
-    require(amount >= highestBidAmount * _minBidIncrease / 10000, "BidQueueLib: Bid should be 5% higher");
+    require(amount >= highestBidAmount + highestBidAmount * _minBidIncrease / 10000, "BidQueueLib: Bid should be 5% higher");
     _addressBids[bidder].push(id);
     _highestBidId = id;
     _indexes[id] = _bidsCounter.current();
