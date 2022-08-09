@@ -168,7 +168,7 @@ describe("AbstractNFT", function () {
 
       const tx2 = abstractInstance.connect(stranger).addBid(nonce2, baseTokenURI, signature2, { value: amount * 2 });
 
-      await expect(tx2).to.be.revertedWith(`Bid amount lower then highest`);
+      await expect(tx2).to.be.revertedWith(`BidQueue: Bid should be 5% higher`);
     });
 
     it("should fail: Bid amount lower then highest (less)", async function () {
@@ -187,7 +187,7 @@ describe("AbstractNFT", function () {
 
       const tx2 = abstractInstance.connect(stranger).addBid(nonce2, baseTokenURI, signature2, { value: amount });
 
-      await expect(tx2).to.be.revertedWith(`Bid amount lower then highest`);
+      await expect(tx2).to.be.revertedWith(`BidQueue: Bid should be 5% higher`);
     });
 
     it("should fail: Expired signature", async function () {
@@ -266,7 +266,7 @@ describe("AbstractNFT", function () {
 
       const tx2 = abstractInstance.connect(stranger).addBid(nonce2, baseTokenURI, signature2, { value: amount * 2 });
 
-      await expect(tx2).to.be.revertedWith(`Not enough bid value`);
+      await expect(tx2).to.be.revertedWith(`BidQueue: Bid should be 5% higher`);
     });
   });
 
@@ -303,6 +303,9 @@ describe("AbstractNFT", function () {
 
       const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(1);
+
+      const bidList = await abstractInstance.connect(receiver).getBidList();
+      expect(bidList.map(n => n.toNumber())).to.deep.equal([1]);
     });
 
     // it("should revoke last bid after auction finished", async function () {

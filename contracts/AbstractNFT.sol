@@ -94,9 +94,7 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
   }
 
   function getQueueInfo() external view returns (uint256 minBet, uint256 timestamp, uint256 total){
-    Bid memory highestBid = getHighestBid();
-    uint256 highestBidAmount = highestBid.amount;
-    minBet = highestBidAmount + highestBidAmount * _minBidIncrease / 10000;
+    minBet = _getMinBet();
     timestamp = _timestamp;
     total = _total;
   }

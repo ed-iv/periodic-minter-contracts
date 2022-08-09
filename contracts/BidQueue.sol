@@ -58,6 +58,11 @@ contract BidQueue {
     bid = _getBidById(bidId);
   }
   // internals
+  function _getMinBet() internal view returns(uint256 minBet){
+    Bid memory highestBid = getHighestBid();
+    uint256 highestBidAmount = highestBid.amount;
+    minBet = highestBidAmount + highestBidAmount * _minBidIncrease / 10000;
+  }
 
   function _pushNewBid(uint256 amount, address bidder, string memory url) internal returns (uint256 id) {
     id = _addBid(amount, bidder, url);
@@ -65,13 +70,11 @@ contract BidQueue {
     _bidsSize.increment();
   }
   
-  // internal 
   function _addBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
     uint256 id = _bidsCounter.current();
-    Bid memory highestBid = getHighestBid();
-    uint256 highestBidAmount = highestBid.amount;
+    uint256 minBet = _getMinBet();
     require(amount > _minBid, "BidQueue: Bid should be higher than minimum");
-    require(amount >= highestBidAmount + highestBidAmount * _minBidIncrease / 10000, "BidQueueLib: Bid should be 5% higher");
+    require(amount >= minBet, "BidQueue: Bid should be 5% higher");
     _addressBids[bidder].push(id);
     _highestBidId = id;
     _indexes[id] = _bidsCounter.current();
