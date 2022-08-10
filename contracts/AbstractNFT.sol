@@ -98,10 +98,11 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
     require(sent, "Exchange: Failed to send Ether");
   }
 
-  function getQueueInfo() external view returns (uint256 minBid, uint256 maxBid, uint256 timestamp, uint256 total){
+  function getQueueInfo() external view returns (uint256 minBid, uint256 maxBid, uint256 timestamp, uint256 queueSize, uint256 total){
     minBid = _getMinBid();
     maxBid = _getMaxBid();
     timestamp = _timestamp;
+    queueSize = getQueueSize();
     total = _total;
   }
 
