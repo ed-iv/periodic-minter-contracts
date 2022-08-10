@@ -144,12 +144,6 @@ describe("AbstractNFT", function () {
 
       const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(2);
-
-      const bidList = await abstractInstance.connect(receiver).getBidList();
-      expect(bidList.map(n => n.toNumber())).to.deep.equal([1]);
-
-      const bidList2 = await abstractInstance.connect(stranger).getBidList();
-      expect(bidList2.map(n => n.toNumber())).to.deep.equal([2]);
     });
 
     it("should fail: Bid amount lower then highest (equal)", async function () {
@@ -234,17 +228,12 @@ describe("AbstractNFT", function () {
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(bidId, receiver.address, amount * 2);
 
-      const bidList1 = await abstractInstance.connect(receiver).getBidList();
-      expect(bidList1.map(n => n.toNumber())).to.deep.equal([1]);
-
       const signature2 = await generateSignatureUpdateRevoke(bidId, nonce2);
       const tx2 = abstractInstance.connect(receiver).updateBid(nonce2, bidId, signature2, { value: amount * 10 });
       await expect(tx2)
         .to.emit(abstractInstance, "UpdateBid")
         .withArgs(bidId, await receiver.getAddress(), amount * 12, amount * 10);
 
-      const bidList2 = await abstractInstance.connect(receiver).getBidList();
-      expect(bidList2.map(n => n.toNumber())).to.deep.equal([2]);
       const highest = await abstractInstance.getHighestBid();
 
       expect(highest.bidder).to.equal(receiver.address);
@@ -294,8 +283,6 @@ describe("AbstractNFT", function () {
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
-      const bidList1 = await abstractInstance.connect(receiver).getBidList();
-      expect(bidList1.map(n => n.toNumber())).to.deep.equal([1]);
 
       // const bi1 = await abstractInstance.connect(receiver).getBidInfo(1);
       // console.log("bi1", bi1);
@@ -315,9 +302,6 @@ describe("AbstractNFT", function () {
 
       const queueSize = await abstractInstance.getQueueSize();
       expect(queueSize).to.equal(1);
-
-      const bidList2 = await abstractInstance.connect(receiver).getBidList();
-      expect(bidList2.map(n => n.toNumber())).to.deep.equal([]);
     });
 
     // it("should revoke last bid after auction finished", async function () {

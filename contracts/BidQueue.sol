@@ -33,8 +33,6 @@ contract BidQueue {
   Counters.Counter private _bidsCounter;
   Counters.Counter private _bidsSize;
   mapping(uint256 => uint256) private  _indexes;
-  mapping(address => uint256[]) private  _addressBids;
-  mapping(address => Counters.Counter) private  _addressValidBidsAmount;
   uint256 private _highestBidId;
 
   constructor(){
@@ -51,54 +49,11 @@ contract BidQueue {
   function getQueueSize() public view returns(uint256) {
     return _bidsSize.current();
   }
-  
-  function getBidList() public view returns(uint256[] memory bids) {
-    uint256 index = 0;
-    // calc the length    
-    for(uint256 i=0; i<_addressBids[msg.sender].length; i++){
-      uint256 id = _addressBids[msg.sender][i];
-      
-      Bid memory bid = _getBidById(id);
-      if(bid.valid == true){
-        index = index + 1;
-      }
-    }
-    //set bids
-    bids = new uint256[](index);
-    index = 0;
-    
-    for(uint256 i=0; i<_addressBids[msg.sender].length; i++){
-      uint256 id = _addressBids[msg.sender][i];
-      
-      Bid memory bid = _getBidById(id);
-      
-      if(bid.valid == true){
-        bids[index] = id;
-        // index = index + 1;
-      }
-    }
-  }
-
-  // function getBidList() public view returns(uint256[] memory bids) {
-  //   uint256 index = 0;
-  //   uint256 addressBidsAmount = _addressValidBidsAmount[msg.sender].current();
-  //   bids = new uint256[](addressBidsAmount);
-  //   console.log("--", _addressBids[msg.sender].length);
-  //   for(uint256 i=0; i<_addressBids[msg.sender].length; i++){
-  //     uint256 id = _addressBids[msg.sender][i];
-      
-  //     Bid memory bid = _getBidById(id);
-  //     console.log("id", id, bid.valid);
-  //     if(bid.valid == true){
-  //       bids[index] = id;
-  //       index = index + 1;
-  //     }
-  //   }
-  // }
 
   function getBidInfo(uint256 bidId) public view _ifBidOwner(bidId) returns(Bid memory bid) {
     bid = _getBidById(bidId);
   }
+
   // internals
   function _getMinBid() internal view returns(uint256 minBet){
     Bid memory highestBid = getHighestBid();
@@ -122,8 +77,6 @@ contract BidQueue {
   
   function _addBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
     uint256 id = _bidsCounter.current();
-    _addressBids[bidder].push(id);
-    _addressValidBidsAmount[bidder].increment();
     _highestBidId = id;
     _indexes[id] = _bidsCounter.current();
     // self._addressBidsCounter[bidder].increment();
@@ -136,7 +89,6 @@ contract BidQueue {
     amount = bid.amount;
     _bidsSize.decrement();
     _removeBid(bidId);
-    _addressValidBidsAmount[bid.bidder].decrement();
     return amount;
   }
 
@@ -157,13 +109,9 @@ contract BidQueue {
     return bid.amount + amount;
   }
 
-  
-
   function _getBidById(uint256 bidId) internal view returns (Bid storage){
     return _bids[_indexes[bidId]];
   }
-
- 
   
   function _removeBid(uint256 bidId) internal _ifBidExists(bidId) {
     require(bidId != _highestBidId, "BidQueue: Highest bid could not be revoked");
