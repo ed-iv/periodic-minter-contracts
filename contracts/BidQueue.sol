@@ -86,12 +86,14 @@ contract BidQueue {
   }
 
   function _pushNewBid(uint256 amount, address bidder, string memory url) internal returns (uint256 id) {
+    // _printBids("PUSH");
     uint256 minBet = _getMinBid();
     require(amount >= _minBid, "BidQueue: Bid should be higher than minimum");
     require(amount >= minBet, "BidQueue: Bid should be 5% higher");
     id = _createBid(amount, bidder, url);
     _bidsCounter.increment();
     _queueSize.increment();
+    // _printBids("AFTER PUSH");
   }
   
   function _createBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
@@ -103,28 +105,57 @@ contract BidQueue {
   }
 
   function _revokeBid(uint256 bidId) internal _ifBidExists(bidId) returns(uint256 amount) {
+    // _printBids("REVOKE");
     Bid storage bid = _getBidById(bidId);
     amount = bid.amount;
     _queueSize.decrement();
     _removeBid(bidId);
-    return amount;
+    // _printBids("AFTER REVOKE");
+    return amount; 
   }
-
+  
   function _popHighestBid() internal returns (Bid memory bid){
-    require(_highestBidId > 0, "BidQueue: Highest bid could not be revoked");
-    bid = _getBidById(_highestBidId);
-    // bid.valid = false;
-    // delete _indexes[_highestBidId];
+    // _printBids("POP");
+    Bid storage bidStorage = _getBidById(_highestBidId);
+    bid = bidStorage;
+    bidStorage.valid = false;
+    delete _indexes[_highestBidId];
     _queueSize.decrement();
-    // while(_bids[_queueSize.current()].valid)
-    _highestBidId = _bids[_queueSize.current()].id;
     _bids.pop();
+    _bidsCounter.decrement();
+    // _printBids("AFTER POP");
+
+    
+    // 
+    bool newBidFound = false;
+    uint256 _highestBidIndex = _bidsCounter.current() - 1;
+    
+    while(!newBidFound){
+      Bid memory newBid = _bids[_highestBidIndex];
+    
+      if(_highestBidIndex<=0){
+        return bid;
+      }
+      if(newBid.valid){
+        newBidFound = true;
+        _highestBidId = newBid.id;
+      } else { 
+        unchecked {
+          _highestBidIndex--;
+        }
+      }      
+      // newBid = _bids[_highestBidIndex];
+      // console.log("T++", _highestBidIndex, newBid.valid);
+    }
+    return bid;
   }
 
   function _updateBid(uint256 bidId, uint256 amount) internal  _ifBidExists(bidId) _ifBidOwner(bidId) returns(uint256) {
+    // _printBids("UPDATE");
     Bid storage bid = _getBidById(bidId);
     _pushNewBid(bid.amount + amount, bid.bidder, bid.url);
     _revokeBid(bidId);
+    // _printBids("AFTER UPDATE");
     return bid.amount + amount;
   }
 
@@ -143,4 +174,11 @@ contract BidQueue {
   function _releaseBids() internal {
     _highestBidId = 0;
   }
+
+  // function _printBids(string memory title) internal view {
+  //   console.log("\n--------", title);
+  //   for(uint i = 0; i< _bids.length; i++ ){
+  //     console.log("BID:",_bids[i].id, " - ", _bids[i].valid);
+  //   }
+  // }
 } 
