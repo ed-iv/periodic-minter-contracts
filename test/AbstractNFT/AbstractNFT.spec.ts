@@ -77,8 +77,8 @@ describe("AbstractNFT", function () {
     );
   };
 
-  // async function testgetQueueInfo(obj: any) {
-  //   const tx = await abstractInstance.getQueueInfo();
+  // async function testgetStackInfo(obj: any) {
+  //   const tx = await abstractInstance.getStackInfo();
   //   console.log(obj === tx);
   //   console.log(tx);
   // }
@@ -119,8 +119,8 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(receiver.address);
       expect(highest.amount).to.equal(amount * 2);
 
-      const queueSize = await abstractInstance.getQueueSize();
-      expect(queueSize).to.equal(1);
+      const stackSize = await abstractInstance.getStackSize();
+      expect(stackSize).to.equal(1);
     });
 
     it("should make second bid", async function () {
@@ -147,8 +147,8 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(stranger.address);
       expect(highest.amount).to.equal(amount * 3);
 
-      const queueSize = await abstractInstance.getQueueSize();
-      expect(queueSize).to.equal(2);
+      const stackSize = await abstractInstance.getStackSize();
+      expect(stackSize).to.equal(2);
     });
 
     it("should fail: Bid amount lower then highest (equal)", async function () {
@@ -167,7 +167,7 @@ describe("AbstractNFT", function () {
 
       const tx2 = abstractInstance.connect(stranger).addBid(nonce2, baseTokenURI, signature2, { value: amount * 2 });
 
-      await expect(tx2).to.be.revertedWith(`BidQueue: Bid should be 5% higher`);
+      await expect(tx2).to.be.revertedWith(`BidStack: Bid should be 5% higher`);
     });
 
     it("should fail: Bid amount lower then highest (less)", async function () {
@@ -186,7 +186,7 @@ describe("AbstractNFT", function () {
 
       const tx2 = abstractInstance.connect(stranger).addBid(nonce2, baseTokenURI, signature2, { value: amount });
 
-      await expect(tx2).to.be.revertedWith(`BidQueue: Bid should be 5% higher`);
+      await expect(tx2).to.be.revertedWith(`BidStack: Bid should be 5% higher`);
     });
 
     it("should fail: Expired signature", async function () {
@@ -216,7 +216,7 @@ describe("AbstractNFT", function () {
 
       const tx1 = abstractInstance.connect(receiver).addBid(nonce, baseTokenURI, signature, { value: amount / 2 });
 
-      await expect(tx1).to.be.revertedWith(`BidQueue: Bid should be higher than minimum`);
+      await expect(tx1).to.be.revertedWith(`BidStack: Bid should be higher than minimum`);
     });
   });
 
@@ -244,8 +244,8 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(receiver.address);
       expect(highest.amount).to.equal(amount * 12);
 
-      const queueSize = await abstractInstance.getQueueSize();
-      expect(queueSize).to.equal(1);
+      const stackSize = await abstractInstance.getStackSize();
+      expect(stackSize).to.equal(1);
     });
 
     it("should fail: Not enough bid value", async function () {
@@ -264,7 +264,7 @@ describe("AbstractNFT", function () {
 
       const tx2 = abstractInstance.connect(stranger).addBid(nonce2, baseTokenURI, signature2, { value: amount * 2 });
 
-      await expect(tx2).to.be.revertedWith(`BidQueue: Bid should be 5% higher`);
+      await expect(tx2).to.be.revertedWith(`BidStack: Bid should be 5% higher`);
     });
   });
 
@@ -305,8 +305,8 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(stranger.address);
       expect(highest.amount).to.equal(amount * 3);
 
-      const queueSize = await abstractInstance.getQueueSize();
-      expect(queueSize).to.equal(1);
+      const stackSize = await abstractInstance.getStackSize();
+      expect(stackSize).to.equal(1);
     });
 
     // it("should revoke last bid after auction finished", async function () {
@@ -354,8 +354,8 @@ describe("AbstractNFT", function () {
     //   console.log("_5");
     //   await expect(tx5).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, stranger.address, 2);
 
-    //   const queueSize = await abstractInstance.getQueueSize();
-    //   expect(queueSize).to.equal(1);
+    //   const stackSize = await abstractInstance.getStackSize();
+    //   expect(stackSize).to.equal(1);
 
     //   const tx6 = abstractInstance.connect(receiver).revokeBid(1);
     //   console.log("_6");
@@ -388,7 +388,7 @@ describe("AbstractNFT", function () {
       const signature3 = await generateSignatureUpdateRevoke(2, nonce3);
       const tx3 = abstractInstance.connect(stranger).revokeBid(nonce3, 2, signature3);
 
-      await expect(tx3).to.be.revertedWith(`BidQueue: Highest bid could not be revoked`);
+      await expect(tx3).to.be.revertedWith(`BidStack: Highest bid could not be revoked`);
     });
 
     it("should fail: Not an owner", async function () {
@@ -442,8 +442,8 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(ethers.constants.AddressZero);
       expect(highest.amount).to.equal(0);
 
-      const queueSize = await abstractInstance.getQueueSize();
-      expect(queueSize).to.equal(0);
+      const stackSize = await abstractInstance.getStackSize();
+      expect(stackSize).to.equal(0);
     });
 
     it("should mint after second bid", async function () {
@@ -479,8 +479,8 @@ describe("AbstractNFT", function () {
       expect(highest.bidder).to.equal(receiver.address);
       expect(highest.amount).to.equal(amount * 2);
 
-      const queueSize = await abstractInstance.getQueueSize();
-      expect(queueSize).to.equal(1);
+      const stackSize = await abstractInstance.getStackSize();
+      expect(stackSize).to.equal(1);
     });
 
     it("should mint twice after second bid", async function () {
@@ -519,14 +519,14 @@ describe("AbstractNFT", function () {
 
       await expect(tx4).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, receiver.address, 2);
 
-      const queueSize = await abstractInstance.getQueueSize();
-      expect(queueSize).to.equal(0);
+      const stackSize = await abstractInstance.getStackSize();
+      expect(stackSize).to.equal(0);
     });
 
     it("should mint correctly after update", async function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-      // await testgetQueueInfo({});
+      // await testgetStackInfo({});
       const signature1 = await generateSignature(receiver, 2, nonce1);
 
       // 1 bid
@@ -535,7 +535,7 @@ describe("AbstractNFT", function () {
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
-      // await testgetQueueInfo({});
+      // await testgetStackInfo({});
 
       // 2nd bid
       const signature2 = await generateSignature(stranger, 3, nonce2);
@@ -545,7 +545,7 @@ describe("AbstractNFT", function () {
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
-      // await testgetQueueInfo({});
+      // await testgetStackInfo({});
 
       // 1st update
       const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
@@ -554,7 +554,7 @@ describe("AbstractNFT", function () {
       await expect(tx3)
         .to.emit(abstractInstance, "UpdateBid")
         .withArgs(1, await receiver.getAddress(), amount * 12, amount * 10);
-      // await testgetQueueInfo({});
+      // await testgetStackInfo({});
 
       // mint 1
       const current1 = await time.latest();
@@ -565,7 +565,7 @@ describe("AbstractNFT", function () {
       await expect(tx4)
         .to.emit(erc721Instance, "Transfer")
         .withArgs(ethers.constants.AddressZero, receiver.address, tokenId);
-      // await testgetQueueInfo({});
+      // await testgetStackInfo({});
 
       // mint 2
       const current2 = await time.latest();
@@ -575,9 +575,9 @@ describe("AbstractNFT", function () {
 
       await expect(tx5).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, stranger.address, 2);
 
-      const queueSize = await abstractInstance.getQueueSize();
-      expect(queueSize).to.equal(0);
-      // await testgetQueueInfo({});
+      const stackSize = await abstractInstance.getStackSize();
+      expect(stackSize).to.equal(0);
+      // await testgetStackInfo({});
     });
 
     it("should fail: Not yet callable", async function () {

@@ -7,11 +7,11 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "./BidQueue.sol";
+import "./BidStack.sol";
 import "./SignatureValidator.sol";
 import "./interfaces/IERC721Abstract.sol";
 
-contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, SignatureValidator {
+contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidStack, SignatureValidator {
   using Address for address;
 
   IERC721Abstract _factory;
@@ -45,7 +45,7 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
 
     _verifySignature(nonce, account, url, msg.value, _owner, signature);
 
-    if (getQueueSize() == 0) {
+    if (getStackSize() == 0) {
       _timestamp = block.timestamp + 86400;
     }
 
@@ -70,11 +70,11 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
     require(_timestamp < block.timestamp, "Not yet callable");
     require(_total > 0, "Limit exceeded");
 
-    BidQueue.Bid memory topBid = _popHighestBid();
+    BidStack.Bid memory topBid = _popHighestBid();
 
     _total = _total - 1;
 
-    if (getQueueSize() > 0) {
+    if (getStackSize() > 0) {
       _timestamp = block.timestamp + 86400;
     }
     // console.log(">>", topBid.bidder);
@@ -99,11 +99,11 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidQueue, Sign
     require(sent, "Exchange: Failed to send Ether");
   }
 
-  function getQueueInfo() external view returns (uint256 minBid, uint256 maxBid, uint256 timestamp, uint256 queueSize, uint256 total){
+  function getStackInfo() external view returns (uint256 minBid, uint256 maxBid, uint256 timestamp, uint256 stackSize, uint256 total){
     minBid = _getMinBid();
     maxBid = _getMaxBid();
     timestamp = _timestamp;
-    queueSize = getQueueSize();
+    stackSize = getStackSize();
     total = _total;
   }
 

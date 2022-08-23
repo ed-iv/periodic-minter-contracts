@@ -4,16 +4,16 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "hardhat/console.sol";
 
-contract BidQueue {
+contract BidStack {
   using Counters for Counters.Counter;
 
   modifier _ifBidExists(uint256 bidId){
-    require(_indexes[bidId] > 0 && _bids[_indexes[bidId]].exists, "BidQueue: Bid not exists");
+    require(_indexes[bidId] > 0 && _bids[_indexes[bidId]].exists, "BidStack: Bid not exists");
     _;
   }
   modifier _ifBidOwner(uint256 bidId) {
-    require(_getBidById(bidId).bidder != address(0), "BidQueue: Wrong bid ID");
-    require(_getBidById(bidId).bidder == msg.sender, "BidQueue: Restrict to bids owner only");
+    require(_getBidById(bidId).bidder != address(0), "BidStack: Wrong bid ID");
+    require(_getBidById(bidId).bidder == msg.sender, "BidStack: Restrict to bids owner only");
     _;
   }
 
@@ -25,13 +25,13 @@ contract BidQueue {
         bool valid;
         bool exists;
   }
-  
+
   uint256 private _minBidIncrease = 500;
   uint256 private _minBid = 100000000000000; // 0.0001 eth
 
   Bid[] _bids;
   Counters.Counter private _bidsCounter;
-  Counters.Counter private _queueSize;
+  Counters.Counter private _stackSize;
   mapping(uint256 => uint256) private  _indexes;
   uint256 private _highestBidId;
 
@@ -46,8 +46,8 @@ contract BidQueue {
     return _bids[_indexes[_highestBidId]];
   }
 
-  function getQueueSize() public view returns(uint256) {
-    return _queueSize.current();
+  function getStackSize() public view returns(uint256) {
+    return _stackSize.current();
   }
 
   function getBidInfo(uint256 bidId) public view _ifBidOwner(bidId) returns(Bid memory bid) {
@@ -88,14 +88,14 @@ contract BidQueue {
   function _pushNewBid(uint256 amount, address bidder, string memory url) internal returns (uint256 id) {
     // _printBids("PUSH");
     uint256 minBet = _getMinBid();
-    require(amount >= _minBid, "BidQueue: Bid should be higher than minimum");
-    require(amount >= minBet, "BidQueue: Bid should be 5% higher");
+    require(amount >= _minBid, "BidStack: Bid should be higher than minimum");
+    require(amount >= minBet, "BidStack: Bid should be 5% higher");
     id = _createBid(amount, bidder, url);
     _bidsCounter.increment();
-    _queueSize.increment();
+    _stackSize.increment();
     // _printBids("AFTER PUSH");
   }
-  
+
   function _createBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
     uint256 id = _bidsCounter.current();
     _highestBidId = id;
@@ -108,42 +108,42 @@ contract BidQueue {
     // _printBids("REVOKE");
     Bid storage bid = _getBidById(bidId);
     amount = bid.amount;
-    _queueSize.decrement();
+    _stackSize.decrement();
     _removeBid(bidId);
     // _printBids("AFTER REVOKE");
-    return amount; 
+    return amount;
   }
-  
+
   function _popHighestBid() internal returns (Bid memory bid){
     // _printBids("POP");
     Bid storage bidStorage = _getBidById(_highestBidId);
     bid = bidStorage;
     bidStorage.valid = false;
     delete _indexes[_highestBidId];
-    _queueSize.decrement();
+    _stackSize.decrement();
     _bids.pop();
     _bidsCounter.decrement();
     // _printBids("AFTER POP");
 
-    
-    // 
+
+    //
     bool newBidFound = false;
     uint256 _highestBidIndex = _bidsCounter.current() - 1;
-    
+
     while(!newBidFound){
       Bid memory newBid = _bids[_highestBidIndex];
-    
+
       if(_highestBidIndex<=0){
         return bid;
       }
       if(newBid.valid){
         newBidFound = true;
         _highestBidId = newBid.id;
-      } else { 
+      } else {
         unchecked {
           _highestBidIndex--;
         }
-      }      
+      }
       // newBid = _bids[_highestBidIndex];
       // console.log("T++", _highestBidIndex, newBid.valid);
     }
@@ -162,9 +162,9 @@ contract BidQueue {
   function _getBidById(uint256 bidId) internal view returns (Bid storage){
     return _bids[_indexes[bidId]];
   }
-  
+
   function _removeBid(uint256 bidId) internal _ifBidExists(bidId) {
-    require(bidId != _highestBidId, "BidQueue: Highest bid could not be revoked");
+    require(bidId != _highestBidId, "BidStack: Highest bid could not be revoked");
     Bid storage bid = _getBidById(bidId);
     bid.valid = false;
     delete _indexes[bidId];
@@ -181,4 +181,4 @@ contract BidQueue {
   //     console.log("BID:",_bids[i].id, " - ", _bids[i].valid);
   //   }
   // }
-} 
+}
