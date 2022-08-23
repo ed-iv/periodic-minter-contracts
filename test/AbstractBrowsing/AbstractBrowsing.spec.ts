@@ -6,7 +6,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Network } from "@ethersproject/networks";
 import { time } from "@openzeppelin/test-helpers";
 
-import { AbstractNFT, ERC721Test } from "../../typechain-types";
+import { AbstractBrowsing, ERC721Test } from "../../typechain-types";
 import {
   amount,
   baseTokenURI,
@@ -18,8 +18,8 @@ import {
   tokenSymbol,
 } from "../constants";
 
-describe("AbstractNFT", function () {
-  let abstractInstance: AbstractNFT;
+describe("AbstractBrowsing", function () {
+  let abstractInstance: AbstractBrowsing;
   let erc721Instance: ERC721Test;
   let owner: SignerWithAddress;
   let receiver: SignerWithAddress;
@@ -53,6 +53,7 @@ describe("AbstractNFT", function () {
       },
     );
   };
+
   const generateSignatureUpdateRevoke = (bidId: number, customNonce = nonce) => {
     return owner._signTypedData(
       // Domain
@@ -77,18 +78,13 @@ describe("AbstractNFT", function () {
     );
   };
 
-  // async function testgetStackInfo(obj: any) {
-  //   const tx = await abstractInstance.getStackInfo();
-  //   console.log(obj === tx);
-  //   console.log(tx);
-  // }
   beforeEach(async function () {
     [owner, receiver, stranger] = await ethers.getSigners();
 
     const erc721Factory = await ethers.getContractFactory("ERC721Test");
     erc721Instance = await erc721Factory.deploy(tokenName, tokenSymbol);
 
-    const abstractFactory = await ethers.getContractFactory("AbstractNFT");
+    const abstractFactory = await ethers.getContractFactory("AbstractBrowsing");
     abstractInstance = await abstractFactory.deploy(tokenName);
 
     await abstractInstance.setFactory(erc721Instance.address);
@@ -268,7 +264,7 @@ describe("AbstractNFT", function () {
     });
   });
 
-  describe("revokeBid", function () {
+  describe("cancelBid", function () {
     it("should revoke", async function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
@@ -293,10 +289,10 @@ describe("AbstractNFT", function () {
       // console.log("bi1", bi1);
       const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const signature3 = await generateSignatureUpdateRevoke(1, nonce3);
-      const tx3 = abstractInstance.connect(receiver).revokeBid(nonce3, 1, signature3);
+      const tx3 = abstractInstance.connect(receiver).cancelBid(nonce3, 1, signature3);
 
       await expect(tx3)
-        .to.emit(abstractInstance, "RevokeBid")
+        .to.emit(abstractInstance, "CancelBid")
         .withArgs(1, receiver.address, amount * 2);
 
       // const bi2 = await abstractInstance.connect(receiver).getBidInfo(1);
@@ -357,10 +353,10 @@ describe("AbstractNFT", function () {
     //   const stackSize = await abstractInstance.getStackSize();
     //   expect(stackSize).to.equal(1);
 
-    //   const tx6 = abstractInstance.connect(receiver).revokeBid(1);
+    //   const tx6 = abstractInstance.connect(receiver).cancelBid(1);
     //   console.log("_6");
     //   await expect(tx6)
-    //     .to.emit(abstractInstance, "RevokeBid")
+    //     .to.emit(abstractInstance, "cancelBid")
     //     .withArgs(1, receiver.address, amount * 2);
     // });
 
@@ -386,7 +382,7 @@ describe("AbstractNFT", function () {
 
       const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const signature3 = await generateSignatureUpdateRevoke(2, nonce3);
-      const tx3 = abstractInstance.connect(stranger).revokeBid(nonce3, 2, signature3);
+      const tx3 = abstractInstance.connect(stranger).cancelBid(nonce3, 2, signature3);
 
       await expect(tx3).to.be.revertedWith(`BidStack: Highest bid could not be revoked`);
     });
@@ -413,7 +409,7 @@ describe("AbstractNFT", function () {
 
       const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const signature3 = await generateSignatureUpdateRevoke(1, nonce3);
-      const tx3 = abstractInstance.connect(stranger).revokeBid(nonce3, 1, signature3);
+      const tx3 = abstractInstance.connect(stranger).cancelBid(nonce3, 1, signature3);
 
       await expect(tx3).to.be.revertedWith(`Exchange: Not an owner`);
     });

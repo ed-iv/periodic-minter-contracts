@@ -11,18 +11,17 @@ import "./BidStack.sol";
 import "./SignatureValidator.sol";
 import "./interfaces/IERC721Abstract.sol";
 
-contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidStack, SignatureValidator {
+contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack, SignatureValidator {
   using Address for address;
 
   IERC721Abstract _factory;
   uint256 private _total = 500;
   uint256 private _timestamp;
   address private _owner;
-  // mapping(uint256 => string) private _urls;
 
   event CreateBid(uint256 bidId, address indexed account, uint256 amount);
   event UpdateBid(uint256 bidId, address indexed account, uint256 newAmount, uint256 addition);
-  event RevokeBid(uint256 bidId, address indexed account, uint256 amount);
+  event CancelBid(uint256 bidId, address indexed account, uint256 amount);
   event Withdrawn(address indexed account, uint256 amount);
 
   constructor(string memory name) SignatureValidator(name) {
@@ -34,23 +33,17 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidStack, Sign
     require(factory.isContract(), "Exchange: the factory must be a deployed contract");
     _factory = IERC721Abstract(factory);
   }
-
   function createBid(
     bytes32 nonce,
     string memory url,
     bytes calldata signature
   ) external payable whenNotPaused returns (uint256 bidId){
-
-    address account = _msgSender();
-
-    _verifySignature(nonce, account, url, msg.value, _owner, signature);
-
+    _verifySignature(nonce, _msgSender(), url, msg.value, _owner, signature);
     if (getStackSize() == 0) {
       _timestamp = block.timestamp + 86400;
     }
-
-    bidId = _pushNewBid(msg.value, account, url);
-    emit CreateBid(bidId, account, msg.value);
+    bidId = _pushNewBid(msg.value, _msgSender(), url);
+    emit CreateBid(bidId, _msgSender(), msg.value);
   }
 
   function updateBid(
@@ -58,11 +51,23 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidStack, Sign
     uint256 bidId,
     bytes calldata signature
   ) external payable whenNotPaused {
-
     _verifySignatureUpdateRevoke(nonce, bidId,  _owner, signature);
-
     uint256 newAmount = _updateBid(bidId, msg.value);
     emit UpdateBid(bidId, msg.sender, newAmount, msg.value);
+  }
+
+  function cancelBid(
+    bytes32 nonce,
+    uint256 bidId,
+    bytes calldata signature
+  ) external _ifBidExists(bidId) {
+    _verifySignatureUpdateRevoke(nonce, bidId,  _owner, signature);
+    address account = _msgSender();
+    require(_getBidById(bidId).bidder == account, "Exchange: Not an owner");
+    uint256 amount = _cancelBid(bidId);
+    emit CancelBid(bidId, account, amount);
+    (bool sent, ) = account.call{ value: amount, gas: 20317 }("");
+    require(sent, "Exchange: Failed to send Ether");
   }
 
 
@@ -83,20 +88,6 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidStack, Sign
     if(_total == 0){
       _releaseBids();
     }
-  }
-
-  function revokeBid(
-    bytes32 nonce,
-    uint256 bidId,
-    bytes calldata signature
-  ) external _ifBidExists(bidId) {
-    _verifySignatureUpdateRevoke(nonce, bidId,  _owner, signature);
-    address account = _msgSender();
-    require(_getBidById(bidId).bidder == account, "Exchange: Not an owner");
-    uint256 amount = _revokeBid(bidId);
-    emit RevokeBid(bidId, account, amount);
-    (bool sent, ) = account.call{ value: amount, gas: 20317 }("");
-    require(sent, "Exchange: Failed to send Ether");
   }
 
   function getStackInfo() external view returns (uint256 minBid, uint256 maxBid, uint256 timestamp, uint256 stackSize, uint256 total){

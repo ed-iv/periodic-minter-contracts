@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "hardhat/console.sol";
@@ -7,23 +6,13 @@ import "hardhat/console.sol";
 contract BidStack {
   using Counters for Counters.Counter;
 
-  modifier _ifBidExists(uint256 bidId){
-    require(_indexes[bidId] > 0 && _bids[_indexes[bidId]].exists, "BidStack: Bid not exists");
-    _;
-  }
-  modifier _ifBidOwner(uint256 bidId) {
-    require(_getBidById(bidId).bidder != address(0), "BidStack: Wrong bid ID");
-    require(_getBidById(bidId).bidder == msg.sender, "BidStack: Restrict to bids owner only");
-    _;
-  }
-
   struct Bid {
-        address bidder;
-        uint256 id;
-        string url;
-        uint256 amount;
-        bool valid;
-        bool exists;
+      address bidder;
+      uint256 id;
+      string url;
+      uint256 amount;
+      bool valid;
+      bool exists;
   }
 
   uint256 private _minBidIncrease = 500;
@@ -34,6 +23,16 @@ contract BidStack {
   Counters.Counter private _stackSize;
   mapping(uint256 => uint256) private  _indexes;
   uint256 private _highestBidId;
+
+  modifier _ifBidExists(uint256 bidId){
+    require(_indexes[bidId] > 0 && _bids[_indexes[bidId]].exists, "BidStack: Bid not exists");
+    _;
+  }
+  modifier _ifBidOwner(uint256 bidId) {
+    require(_getBidById(bidId).bidder != address(0), "BidStack: Wrong bid ID");
+    require(_getBidById(bidId).bidder == msg.sender, "BidStack: Restrict to bids owner only");
+    _;
+  }
 
   constructor(){
     // add a empty bid to start with 1 index
@@ -74,10 +73,10 @@ contract BidStack {
   }
 
   // internals
-  function _getMinBid() internal view returns(uint256 minBet){
+  function _getMinBid() internal view returns(uint256 minBid){
     Bid memory highestBid = getHighestBid();
     uint256 highestBidAmount = highestBid.amount;
-    minBet = highestBidAmount + highestBidAmount * _minBidIncrease / 10000;
+    minBid = highestBidAmount + highestBidAmount * _minBidIncrease / 10000;
   }
 
   function _getMaxBid() internal view returns(uint256 maxBid){
@@ -86,14 +85,12 @@ contract BidStack {
   }
 
   function _pushNewBid(uint256 amount, address bidder, string memory url) internal returns (uint256 id) {
-    // _printBids("PUSH");
-    uint256 minBet = _getMinBid();
+    uint256 minBid = _getMinBid();
     require(amount >= _minBid, "BidStack: Bid should be higher than minimum");
-    require(amount >= minBet, "BidStack: Bid should be 5% higher");
+    require(amount >= minBid, "BidStack: Bid should be 5% higher");
     id = _createBid(amount, bidder, url);
     _bidsCounter.increment();
     _stackSize.increment();
-    // _printBids("AFTER PUSH");
   }
 
   function _createBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
@@ -104,18 +101,16 @@ contract BidStack {
     return id;
   }
 
-  function _revokeBid(uint256 bidId) internal _ifBidExists(bidId) returns(uint256 amount) {
-    // _printBids("REVOKE");
+  // TODO - need to return funds associated with this bid to user
+  function _cancelBid(uint256 bidId) internal _ifBidExists(bidId) returns(uint256 amount) {
     Bid storage bid = _getBidById(bidId);
     amount = bid.amount;
     _stackSize.decrement();
     _removeBid(bidId);
-    // _printBids("AFTER REVOKE");
     return amount;
   }
 
   function _popHighestBid() internal returns (Bid memory bid){
-    // _printBids("POP");
     Bid storage bidStorage = _getBidById(_highestBidId);
     bid = bidStorage;
     bidStorage.valid = false;
@@ -123,10 +118,7 @@ contract BidStack {
     _stackSize.decrement();
     _bids.pop();
     _bidsCounter.decrement();
-    // _printBids("AFTER POP");
 
-
-    //
     bool newBidFound = false;
     uint256 _highestBidIndex = _bidsCounter.current() - 1;
 
@@ -144,18 +136,14 @@ contract BidStack {
           _highestBidIndex--;
         }
       }
-      // newBid = _bids[_highestBidIndex];
-      // console.log("T++", _highestBidIndex, newBid.valid);
     }
     return bid;
   }
 
   function _updateBid(uint256 bidId, uint256 amount) internal  _ifBidExists(bidId) _ifBidOwner(bidId) returns(uint256) {
-    // _printBids("UPDATE");
     Bid storage bid = _getBidById(bidId);
     _pushNewBid(bid.amount + amount, bid.bidder, bid.url);
-    _revokeBid(bidId);
-    // _printBids("AFTER UPDATE");
+    _cancelBid(bidId);
     return bid.amount + amount;
   }
 
