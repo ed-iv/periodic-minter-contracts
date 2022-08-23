@@ -1,10 +1,13 @@
+import * as dotenv from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-deploy";
 import "solidity-coverage";
-
+import "hardhat-gas-reporter";
 import "./tasks";
+
+dotenv.config();
 
 export default {
   defaultNetwork: "hardhat",
@@ -21,6 +24,12 @@ export default {
         "0xae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f", // 0xf17f52151EbEF6C7334FAD080c5704D77216b732
       ],
     },
+  },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS !== undefined,
+    currency: "USD",
+    coinmarketcap: process.env.COIN_MARKET_CAP_KEY || "",
+    gasPrice: 50,
   },
   solidity: {
     version: "0.8.9",
