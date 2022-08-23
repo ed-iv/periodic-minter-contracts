@@ -35,7 +35,7 @@ contract AbstractNFT is AccessControl, Pausable, ReentrancyGuard, BidStack, Sign
     _factory = IERC721Abstract(factory);
   }
 
-  function addBid(
+  function createBid(
     bytes32 nonce,
     string memory url,
     bytes calldata signature

@@ -10,7 +10,7 @@ contract SignatureValidator is EIP712 {
 
   mapping(bytes32 => bool) private _expired;
 
-  bytes32 private constant PERMIT_SIGNATURE = keccak256("ADDBID(bytes32 nonce,address account,string url,uint256 price)");
+  bytes32 private constant PERMIT_SIGNATURE = keccak256("createBid(bytes32 nonce,address account,string url,uint256 price)");
   bytes32 private constant PERMIT_SIGNATURE_UPDATEREVOKE = keccak256("UPDATEREVOKE(bytes32 nonce,uint256 bidId)");
 
   constructor(string memory name) EIP712(name, "1.0.0") {}
