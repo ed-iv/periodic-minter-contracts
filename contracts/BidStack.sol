@@ -18,13 +18,13 @@ contract BidStack {
   uint256 private _minBid = 100000000000000; // 0.0001 eth
 
   Bid[] _bids;
-  Counters.Counter private _bidsCounter;
+  uint256 private _nextBidId = 1;
   Counters.Counter private _stackSize;
-  mapping(uint256 => uint256) private  _indexes;
+  mapping(uint256 => uint256) private  _bidIndexes;
   uint256 private _highestBidId;
 
   modifier _ifBidExists(uint256 bidId){
-    require(_bids[_indexes[bidId]].bidder != address(0), "BidStack: Bid not exists");
+    require(_bids[_bidIndexes[bidId]].bidder != address(0), "BidStack: Bid not exists");
     _;
   }
   modifier _ifBidOwner(uint256 bidId) {
@@ -36,12 +36,11 @@ contract BidStack {
   constructor(){
     // add a empty bid to start with 1 index
     _bids.push(Bid(address(0), 0, "", 0, false));
-    _bidsCounter.increment();
     _bids[0].valid = false;
   }
 
   function getHighestBid() public view returns (Bid memory){
-    return _bids[_indexes[_highestBidId]];
+    return _bids[_bidIndexes[_highestBidId]];
   }
 
   function getStackSize() public view returns(uint256) {
@@ -88,16 +87,15 @@ contract BidStack {
     require(amount >= _minBid, "BidStack: Bid should be higher than minimum");
     require(amount >= minBid, "BidStack: Bid should be 5% higher");
     id = _createBid(amount, bidder, url);
-    _bidsCounter.increment();
     _stackSize.increment();
   }
 
   function _createBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
-    uint256 id = _bidsCounter.current();
-    _highestBidId = id;
-    _indexes[id] = _bidsCounter.current();
-    _bids.push(Bid(bidder, id, url, amount, true));
-    return id;
+    uint256 bidId = _nextBidId++;
+    _highestBidId = bidId;
+    _bids.push(Bid(bidder, bidId, url, amount, true));
+    _bidIndexes[bidId] = _bids.length - 1;
+    return bidId;
   }
 
   // TODO - need to return funds associated with this bid to user
@@ -113,13 +111,11 @@ contract BidStack {
     Bid storage bidStorage = _getBidById(_highestBidId);
     bid = bidStorage;
     bidStorage.valid = false;
-    delete _indexes[_highestBidId];
+    delete _bidIndexes[_highestBidId];
     _stackSize.decrement();
     _bids.pop();
-    _bidsCounter.decrement();
-
     bool newBidFound = false;
-    uint256 _highestBidIndex = _bidsCounter.current() - 1;
+    uint256 _highestBidIndex = _bids.length - 1;
 
     while(!newBidFound){
       Bid memory newBid = _bids[_highestBidIndex];
@@ -147,14 +143,14 @@ contract BidStack {
   }
 
   function _getBidById(uint256 bidId) internal view returns (Bid storage){
-    return _bids[_indexes[bidId]];
+    return _bids[_bidIndexes[bidId]];
   }
 
   function _removeBid(uint256 bidId) internal _ifBidExists(bidId) {
     require(bidId != _highestBidId, "BidStack: Highest bid could not be revoked");
     Bid storage bid = _getBidById(bidId);
     bid.valid = false;
-    delete _indexes[bidId];
+    delete _bidIndexes[bidId];
   }
 
   // allow to revoke all bids including highest
