@@ -12,7 +12,6 @@ contract BidStack {
       string url;
       uint256 amount;
       bool valid;
-      bool exists;
   }
 
   uint256 private _minBidIncrease = 500;
@@ -25,7 +24,7 @@ contract BidStack {
   uint256 private _highestBidId;
 
   modifier _ifBidExists(uint256 bidId){
-    require(_indexes[bidId] > 0 && _bids[_indexes[bidId]].exists, "BidStack: Bid not exists");
+    require(_bids[_indexes[bidId]].bidder != address(0), "BidStack: Bid not exists");
     _;
   }
   modifier _ifBidOwner(uint256 bidId) {
@@ -36,7 +35,7 @@ contract BidStack {
 
   constructor(){
     // add a empty bid to start with 1 index
-    _bids.push(Bid(address(0), 0, "", 0, false, true));
+    _bids.push(Bid(address(0), 0, "", 0, false));
     _bidsCounter.increment();
     _bids[0].valid = false;
   }
@@ -97,7 +96,7 @@ contract BidStack {
     uint256 id = _bidsCounter.current();
     _highestBidId = id;
     _indexes[id] = _bidsCounter.current();
-    _bids.push(Bid(bidder, id, url, amount, true, true));
+    _bids.push(Bid(bidder, id, url, amount, true));
     return id;
   }
 
