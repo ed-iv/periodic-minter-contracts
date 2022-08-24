@@ -53,10 +53,6 @@ contract BidStack {
     return _bids.length > 1;
   }
 
-  function getBidInfo(uint256 bidId) public view _ifBidOwner(bidId) returns(Bid memory bid) {
-    bid = _getBidById(bidId);
-  }
-
   function getMyBids() public view returns(uint256[] memory results) {
     uint256 myBidsAmount = 0;
     for(uint i = 0; i < _bids.length; i++){

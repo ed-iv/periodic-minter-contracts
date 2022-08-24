@@ -276,8 +276,6 @@ describe("AbstractBrowsing", function () {
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
 
-      // const bi1 = await abstractInstance.connect(receiver).getBidInfo(1);
-      // console.log("bi1", bi1);
       const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const signature3 = await generateSignatureUpdateRevoke(1, nonce3);
       const tx3 = abstractInstance.connect(receiver).cancelBid(nonce3, 1, signature3);
@@ -286,8 +284,6 @@ describe("AbstractBrowsing", function () {
         .to.emit(abstractInstance, "CancelBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      // const bi2 = await abstractInstance.connect(receiver).getBidInfo(1);
-      // console.log("bi2", bi2);
       const highest = await abstractInstance.getHighestBid();
       expect(highest.bidder).to.equal(stranger.address);
       expect(highest.amount).to.equal(amount * 3);
