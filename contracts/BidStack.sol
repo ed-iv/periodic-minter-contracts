@@ -40,7 +40,7 @@ contract BidStack {
   }
 
   function getHighestBid() public view returns (Bid memory){
-    return _bids[_bidIndexes[_highestBidId]];
+    return _bids[_bids.length-1];
   }
 
   function getStackSize() public view returns(uint256) {
@@ -92,7 +92,6 @@ contract BidStack {
 
   function _createBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
     uint256 bidId = _nextBidId++;
-    _highestBidId = bidId;
     _bids.push(Bid(bidder, bidId, url, amount, true));
     _bidIndexes[bidId] = _bids.length - 1;
     return bidId;
@@ -107,30 +106,14 @@ contract BidStack {
     return amount;
   }
 
-  function _popHighestBid() internal returns (Bid memory bid){
-    Bid storage bidStorage = _getBidById(_highestBidId);
-    bid = bidStorage;
-    bidStorage.valid = false;
-    delete _bidIndexes[_highestBidId];
+  function _popHighestBid() internal returns (Bid memory){
+    Bid memory bid = getHighestBid();
+    delete _bidIndexes[bid.id];
     _stackSize.decrement();
     _bids.pop();
-    bool newBidFound = false;
-    uint256 _highestBidIndex = _bids.length - 1;
-
-    while(!newBidFound){
-      Bid memory newBid = _bids[_highestBidIndex];
-
-      if(_highestBidIndex<=0){
-        return bid;
-      }
-      if(newBid.valid){
-        newBidFound = true;
-        _highestBidId = newBid.id;
-      } else {
-        unchecked {
-          _highestBidIndex--;
-        }
-      }
+    // Pop invalid bids off of the top of the stack
+    while (_bids.length > 1 && _bids[_bids.length-1].valid == false) {
+      _bids.pop();
     }
     return bid;
   }
@@ -146,17 +129,21 @@ contract BidStack {
     return _bids[_bidIndexes[bidId]];
   }
 
-  function _removeBid(uint256 bidId) internal _ifBidExists(bidId) {
-    require(bidId != _highestBidId, "BidStack: Highest bid could not be revoked");
-    Bid storage bid = _getBidById(bidId);
-    bid.valid = false;
-    delete _bidIndexes[bidId];
-  }
+    function _removeBid(uint256 bidId) internal _ifBidExists(bidId) {
+        require(bidId != _highestBidId, "BidStack: Highest bid could not be revoked");
+        Bid storage bid = _getBidById(bidId);
+        bid.valid = false;
+        delete _bidIndexes[bidId];
+    }
 
-  // allow to revoke all bids including highest
-  function _releaseBids() internal {
-    _highestBidId = 0;
-  }
+    // allow to revoke all bids including highest
+    function _releaseBids() internal {
+        _highestBidId = 0;
+    }
+
+    function _getHighestBidId() internal view returns (uint256 bidId) {
+        return _bids[_bids.length-1].id;
+    }
 
   // function _printBids(string memory title) internal view {
   //   console.log("\n--------", title);
