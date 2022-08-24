@@ -114,9 +114,6 @@ describe("AbstractBrowsing", function () {
       const highest = await abstractInstance.getHighestBid();
       expect(highest.bidder).to.equal(receiver.address);
       expect(highest.amount).to.equal(amount * 2);
-
-      const stackSize = await abstractInstance.getStackSize();
-      expect(stackSize).to.equal(1);
     });
 
     it("should make second bid", async function () {
@@ -142,9 +139,6 @@ describe("AbstractBrowsing", function () {
       const highest = await abstractInstance.getHighestBid();
       expect(highest.bidder).to.equal(stranger.address);
       expect(highest.amount).to.equal(amount * 3);
-
-      const stackSize = await abstractInstance.getStackSize();
-      expect(stackSize).to.equal(2);
     });
 
     it("should fail: Bid amount lower then highest (equal)", async function () {
@@ -239,9 +233,6 @@ describe("AbstractBrowsing", function () {
 
       expect(highest.bidder).to.equal(receiver.address);
       expect(highest.amount).to.equal(amount * 12);
-
-      const stackSize = await abstractInstance.getStackSize();
-      expect(stackSize).to.equal(1);
     });
 
     it("should fail: Not enough bid value", async function () {
@@ -300,65 +291,7 @@ describe("AbstractBrowsing", function () {
       const highest = await abstractInstance.getHighestBid();
       expect(highest.bidder).to.equal(stranger.address);
       expect(highest.amount).to.equal(amount * 3);
-
-      const stackSize = await abstractInstance.getStackSize();
-      expect(stackSize).to.equal(1);
     });
-
-    // it("should revoke last bid after auction finished", async function () {
-    //   const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-    //   const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-    //   const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-
-    //   const signature1 = await generateSignature(receiver, 2, nonce1);
-
-    //   const tx1 = abstractInstance.connect(receiver).createBid(nonce1, baseTokenURI, signature1, { value: amount * 2 });
-
-    //   await expect(tx1)
-    //     .to.emit(abstractInstance, "CreateBid")
-    //     .withArgs(1, receiver.address, amount * 2);
-
-    //   const signature2 = await generateSignature(stranger, 3, nonce2);
-
-    //   const tx2 = abstractInstance.connect(stranger).createBid(nonce2, baseTokenURI, signature2, { value: amount * 3 });
-
-    //   await expect(tx2)
-    //     .to.emit(abstractInstance, "CreateBid")
-    //     .withArgs(2, stranger.address, amount * 3);
-
-    //   const signature3 = await generateSignature(owner, 4, nonce3);
-
-    //   const tx3 = abstractInstance.connect(owner).createBid(nonce3, baseTokenURI, signature3, { value: amount * 4 });
-    //   console.log("_3");
-    //   await expect(tx3)
-    //     .to.emit(abstractInstance, "CreateBid")
-    //     .withArgs(3, owner.address, amount * 4);
-
-    //   const current1 = await time.latest();
-    //   await time.increaseTo(current1.add(web3.utils.toBN(86400)));
-
-    //   const tx4 = abstractInstance.mint();
-    //   console.log("_4");
-    //   await expect(tx4)
-    //     .to.emit(erc721Instance, "Transfer")
-    //     .withArgs(ethers.constants.AddressZero, owner.address, tokenId);
-
-    //   const current2 = await time.latest();
-    //   await time.increaseTo(current2.add(web3.utils.toBN(86400)));
-
-    //   const tx5 = abstractInstance.mint();
-    //   console.log("_5");
-    //   await expect(tx5).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, stranger.address, 2);
-
-    //   const stackSize = await abstractInstance.getStackSize();
-    //   expect(stackSize).to.equal(1);
-
-    //   const tx6 = abstractInstance.connect(receiver).cancelBid(1);
-    //   console.log("_6");
-    //   await expect(tx6)
-    //     .to.emit(abstractInstance, "cancelBid")
-    //     .withArgs(1, receiver.address, amount * 2);
-    // });
 
     it("should fail: Can't remove highest bid", async function () {
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
@@ -437,9 +370,6 @@ describe("AbstractBrowsing", function () {
       const highest = await abstractInstance.getHighestBid();
       expect(highest.bidder).to.equal(ethers.constants.AddressZero);
       expect(highest.amount).to.equal(0);
-
-      const stackSize = await abstractInstance.getStackSize();
-      expect(stackSize).to.equal(0);
     });
 
     it("should mint after second bid", async function () {
@@ -474,9 +404,6 @@ describe("AbstractBrowsing", function () {
       const highest = await abstractInstance.getHighestBid();
       expect(highest.bidder).to.equal(receiver.address);
       expect(highest.amount).to.equal(amount * 2);
-
-      const stackSize = await abstractInstance.getStackSize();
-      expect(stackSize).to.equal(1);
     });
 
     it("should mint twice after second bid", async function () {
@@ -514,9 +441,6 @@ describe("AbstractBrowsing", function () {
       const tx4 = abstractInstance.mint();
 
       await expect(tx4).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, receiver.address, 2);
-
-      const stackSize = await abstractInstance.getStackSize();
-      expect(stackSize).to.equal(0);
     });
 
     it("should mint correctly after update", async function () {
@@ -561,7 +485,6 @@ describe("AbstractBrowsing", function () {
       await expect(tx4)
         .to.emit(erc721Instance, "Transfer")
         .withArgs(ethers.constants.AddressZero, receiver.address, tokenId);
-      // await testgetStackInfo({});
 
       // mint 2
       const current2 = await time.latest();
@@ -570,10 +493,6 @@ describe("AbstractBrowsing", function () {
       const tx5 = abstractInstance.mint();
 
       await expect(tx5).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, stranger.address, 2);
-
-      const stackSize = await abstractInstance.getStackSize();
-      expect(stackSize).to.equal(0);
-      // await testgetStackInfo({});
     });
 
     it("should fail: Not yet callable", async function () {

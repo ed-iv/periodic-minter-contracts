@@ -19,7 +19,6 @@ contract BidStack {
 
   Bid[] _bids;
   uint256 private _nextBidId = 1;
-  Counters.Counter private _stackSize;
   mapping(uint256 => uint256) private  _bidIndexes;
   uint256 private _highestBidId;
 
@@ -41,10 +40,6 @@ contract BidStack {
 
   function getHighestBid() public view returns (Bid memory){
     return _bids[_bids.length-1];
-  }
-
-  function getStackSize() public view returns(uint256) {
-    return _stackSize.current();
   }
 
   /**
@@ -98,7 +93,6 @@ contract BidStack {
     require(amount >= _minBid, "BidStack: Bid should be higher than minimum");
     require(amount >= minBid, "BidStack: Bid should be 5% higher");
     id = _createBid(amount, bidder, url);
-    _stackSize.increment();
   }
 
   function _createBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
@@ -112,7 +106,6 @@ contract BidStack {
   function _cancelBid(uint256 bidId) internal _ifBidExists(bidId) returns(uint256 amount) {
     Bid storage bid = _getBidById(bidId);
     amount = bid.amount;
-    _stackSize.decrement();
     _removeBid(bidId);
     return amount;
   }
@@ -120,7 +113,6 @@ contract BidStack {
   function _popHighestBid() internal returns (Bid memory){
     Bid memory bid = getHighestBid();
     delete _bidIndexes[bid.id];
-    _stackSize.decrement();
     _bids.pop();
     // Pop invalid bids off of the top of the stack
     while (_bids.length > 1 && _bids[_bids.length-1].valid == false) {
