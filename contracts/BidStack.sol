@@ -47,6 +47,17 @@ contract BidStack {
     return _stackSize.current();
   }
 
+  /**
+   * @dev Because of how invalid bids are popped off, a couple invariants should hold at all times:
+   *     (a) The highest bid in the stack will be valid
+   *     (b) if there are no valid bids, there are also be no invalid bids.
+   * Frob (b) we know that if the bid stack size > 1 (has more than just the dummy bid) there MUST be
+   * a valid bid in the stack.
+   */
+  function hasValidBids() public view returns(bool) {
+    return _bids.length > 1;
+  }
+
   function getBidInfo(uint256 bidId) public view _ifBidOwner(bidId) returns(Bid memory bid) {
     bid = _getBidById(bidId);
   }

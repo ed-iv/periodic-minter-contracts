@@ -33,13 +33,14 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
     require(factory.isContract(), "Exchange: the factory must be a deployed contract");
     _factory = IERC721Abstract(factory);
   }
+
   function createBid(
     bytes32 nonce,
     string memory url,
     bytes calldata signature
   ) external payable whenNotPaused returns (uint256 bidId){
     _verifySignature(nonce, _msgSender(), url, msg.value, _owner, signature);
-    if (getStackSize() == 0) {
+    if (hasValidBids()) {
       _timestamp = block.timestamp + 86400;
     }
     bidId = _pushNewBid(msg.value, _msgSender(), url);
@@ -79,7 +80,7 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
 
     _total = _total - 1;
 
-    if (getStackSize() > 0) {
+    if (hasValidBids()) {
       _timestamp = block.timestamp + 86400;
     }
     // console.log(">>", topBid.bidder);
@@ -94,7 +95,7 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
     minBid = _getMinBid();
     maxBid = _getMaxBid();
     timestamp = _timestamp;
-    stackSize = getStackSize();
+    stackSize = _bids.length;
     total = _total;
   }
 
