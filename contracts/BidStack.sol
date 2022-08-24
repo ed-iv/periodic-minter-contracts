@@ -8,7 +8,6 @@ contract BidStack {
         uint256 id;
         string url;
         uint256 amount;
-        bool valid;
     }
 
     uint256 private _minBidIncrease = 500;
@@ -26,8 +25,7 @@ contract BidStack {
 
     constructor(){
         // add a empty bid to start with 1 index
-        _bids.push(Bid(address(0), 0, "", 0, false));
-        _bids[0].valid = false;
+        _bids.push(Bid(address(0), 0, "", 0));
     }
 
     function getHighestBid() public view returns (Bid memory){
@@ -49,7 +47,7 @@ contract BidStack {
         uint256 myBidsAmount = 0;
         for(uint i = 0; i < _bids.length; i++){
             Bid memory bid = _bids[i];
-            if(bid.bidder == msg.sender && bid.valid){
+            if(bid.bidder == msg.sender){
                 myBidsAmount++;
             }
         }
@@ -57,7 +55,7 @@ contract BidStack {
         uint256 index = 0;
         for(uint i = 0; i < _bids.length; i++){
             Bid memory bid = _bids[i];
-            if(bid.bidder == msg.sender && bid.valid){
+            if(bid.bidder == msg.sender){
                 results[index] = i;
                 index++;
             }
@@ -78,7 +76,7 @@ contract BidStack {
 
     function _createBid(uint256 amount, address bidder, string memory url) internal returns (uint256) {
         uint256 bidId = _nextBidId++;
-        _bids.push(Bid(bidder, bidId, url, amount, true));
+        _bids.push(Bid(bidder, bidId, url, amount));
         _bidIndexes[bidId] = _bids.length - 1;
         return bidId;
     }
@@ -103,15 +101,15 @@ contract BidStack {
         delete _bidIndexes[bid.id];
         _bids.pop();
         // Pop invalid bids off of the top of the stack
-        while (_bids.length > 1 && _bids[_bids.length-1].valid == false) {
-        _bids.pop();
+        while (_bids.length > 1 && !_isValid(_bids[_bids.length-1])) {
+          _bids.pop();
         }
         return bid;
     }
 
+    // TODO - Verify case where bidId is invalid
     function _updateBid(uint256 bidId, uint256 amount) internal returns(uint256) {
         Bid storage bid = _getBidById(bidId);
-        require(bid.bidder != address(0), "BidStack: Wrong bid ID");
         require(bid.bidder == msg.sender, "BidStack: Restrict to bids owner only");
         _pushNewBid(bid.amount + amount, bid.bidder, bid.url);
         _cancelBid(bidId);
@@ -124,8 +122,8 @@ contract BidStack {
 
     function _removeBid(uint256 bidId) internal {
         require(bidId != _highestBidId, "BidStack: Highest bid could not be revoked");
-        Bid storage bid = _getBidById(bidId);
-        bid.valid = false;
+        // Invalidate bid
+        _getBidById(bidId).bidder = address(0);
         delete _bidIndexes[bidId];
     }
 
@@ -136,5 +134,9 @@ contract BidStack {
 
     function _getHighestBidId() internal view returns (uint256 bidId) {
         return _bids[_bids.length-1].id;
+    }
+
+    function _isValid(Bid memory bid) internal pure returns (bool) {
+        return bid.bidder != address(0);
     }
 }
