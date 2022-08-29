@@ -2,6 +2,8 @@
 pragma solidity ^0.8.9;
 import "hardhat/console.sol";
 
+error CannotCancelHighBid();
+
 contract BidStack {
     struct Bid {
         address bidder;

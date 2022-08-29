@@ -63,6 +63,7 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
     bytes calldata signature
   ) external _ifBidExists(bidId) {
     _verifySignatureUpdateRevoke(nonce, bidId,  _owner, signature);
+    if (bidId == _getHighestBidId()) revert CannotCancelHighBid();
     address account = _msgSender();
     require(_getBidById(bidId).bidder == account, "Exchange: Not an owner");
     uint256 amount = _cancelBid(bidId);

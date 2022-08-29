@@ -1,11 +1,6 @@
-import * as dotenv from "dotenv";
 import { HardhatUserConfig } from "hardhat/config";
-import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
-import "hardhat-deploy";
-import "solidity-coverage";
-import "hardhat-gas-reporter";
-
+import "@nomicfoundation/hardhat-toolbox";
+import * as dotenv from "dotenv";
 import "./tasks";
 
 dotenv.config();
@@ -13,9 +8,6 @@ dotenv.config();
 export default {
   defaultNetwork: "hardhat",
   networks: {
-    hardhat: {
-      allowUnlimitedContractSize: true,
-    },
     besu: {
       url: "http://127.0.0.1:8545/",
       // https://besu.hyperledger.org/en/stable/Reference/Accounts-for-Testing/
