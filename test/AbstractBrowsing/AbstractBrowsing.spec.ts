@@ -1,9 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Network } from "@ethersproject/networks";
-import { time } from "@openzeppelin/test-helpers";
 
 import {
   amount,
@@ -363,17 +362,14 @@ describe("AbstractBrowsing", function () {
       const { abstractInstance, owner, receiver, erc721Instance, network } = await loadFixture(
         deployAbstractBrowsingFixture,
       );
+
       const signature = await generateSignature(network, abstractInstance.address, owner, receiver, 2);
-
       const tx1 = abstractInstance.connect(receiver).createBid(nonce, baseTokenURI, signature, { value: amount * 2 });
-
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
-      const current1 = await time.latest();
-      await time.increaseTo(current1.add(ethers.BigNumber.from(86400)));
-
+      await time.increase(86400);
       const tx2 = abstractInstance.mint();
 
       await expect(tx2)
@@ -407,9 +403,7 @@ describe("AbstractBrowsing", function () {
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
-
-      const current1 = await time.latest();
-      await time.increaseTo(current1.add(ethers.BigNumber.from(86400)));
+      await time.increase(86400);
 
       const tx3 = abstractInstance.mint();
 
@@ -445,8 +439,7 @@ describe("AbstractBrowsing", function () {
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
 
-      const current1 = await time.latest();
-      await time.increaseTo(current1.add(ethers.BigNumber.from(86400)));
+      await time.increase(86400);
 
       const tx3 = abstractInstance.mint();
 
@@ -454,8 +447,7 @@ describe("AbstractBrowsing", function () {
         .to.emit(erc721Instance, "Transfer")
         .withArgs(ethers.constants.AddressZero, stranger.address, tokenId);
 
-      const current2 = await time.latest();
-      await time.increaseTo(current2.add(ethers.BigNumber.from(86400)));
+      await time.increase(86400);
 
       const tx4 = abstractInstance.mint();
 
@@ -487,7 +479,6 @@ describe("AbstractBrowsing", function () {
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
-      // await testgetStackInfo({});
 
       // 1st update
       const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
@@ -496,11 +487,9 @@ describe("AbstractBrowsing", function () {
       await expect(tx3)
         .to.emit(abstractInstance, "UpdateBid")
         .withArgs(1, await receiver.getAddress(), amount * 12, amount * 10);
-      // await testgetStackInfo({});
 
       // mint 1
-      const current1 = await time.latest();
-      await time.increaseTo(current1.add(ethers.BigNumber.from(86400)));
+      await time.increase(86400);
 
       const tx4 = abstractInstance.mint();
 
@@ -509,8 +498,7 @@ describe("AbstractBrowsing", function () {
         .withArgs(ethers.constants.AddressZero, receiver.address, tokenId);
 
       // mint 2
-      const current2 = await time.latest();
-      await time.increaseTo(current2.add(ethers.BigNumber.from(86400)));
+      await time.increase(86400);
 
       const tx5 = abstractInstance.mint();
 
@@ -543,7 +531,7 @@ describe("AbstractBrowsing", function () {
       await expect(tx3).to.be.revertedWith(`Not yet callable`);
     });
 
-    it("should fail: Limit exceeded", async function () {
+    it("foo should fail: Limit exceeded", async function () {
       const { abstractInstance, erc721Instance, owner, receiver, stranger, network } = await loadFixture(
         deployAbstractBrowsingFixture,
       );
@@ -552,51 +540,39 @@ describe("AbstractBrowsing", function () {
       const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
       const signature1 = await generateSignature(network, abstractInstance.address, owner, receiver, 2, nonce1);
-
       const tx1 = abstractInstance.connect(receiver).createBid(nonce1, baseTokenURI, signature1, { value: amount * 2 });
-
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(1, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner, stranger, 3, nonce2);
-
       const tx2 = abstractInstance.connect(stranger).createBid(nonce2, baseTokenURI, signature2, { value: amount * 3 });
-
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
 
-      const signature3 = await generateSignature(network, abstractInstance.address, owner, receiver, 4, nonce3);
-
+      const signature3 = await generateSignature(network, abstractInstance.address, owner, owner, 4, nonce3);
       const tx3 = abstractInstance.connect(owner).createBid(nonce3, baseTokenURI, signature3, { value: amount * 4 });
-
       await expect(tx3)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(3, owner.address, amount * 4);
 
-      const current1 = await time.latest();
-      await time.increaseTo(current1.add(ethers.BigNumber.from(86400)));
+      await time.increase(86400);
 
       const tx4 = abstractInstance.mint();
-
       await expect(tx4)
         .to.emit(erc721Instance, "Transfer")
         .withArgs(ethers.constants.AddressZero, owner.address, tokenId);
 
-      const current2 = await time.latest();
-      await time.increaseTo(current2.add(ethers.BigNumber.from(86400)));
+      await time.increase(86400);
 
       const tx5 = abstractInstance.mint();
-
       await expect(tx5).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, stranger.address, 2);
-
-      const current3 = await time.latest();
-      await time.increaseTo(current3.add(ethers.BigNumber.from(86400)));
+      await time.increase(86400);
 
       const tx6 = abstractInstance.mint();
 
-      await expect(tx6).to.be.revertedWith(`Exchange: Limit exceeded`);
+      await expect(tx6).to.be.revertedWith(`Limit exceeded`);
     });
   });
 

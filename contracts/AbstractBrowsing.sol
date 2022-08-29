@@ -15,7 +15,8 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
   using Address for address;
 
   IERC721Abstract _factory;
-  uint256 private _total = 500;
+  // TODO figure out better way
+  uint256 private _total = 2;
   uint256 private _timestamp;
   address private _owner;
 

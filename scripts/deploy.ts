@@ -4,7 +4,7 @@ import { tokenName } from "../test/constants";
 
 async function main() {
   const coinFactory = await ethers.getContractFactory("Val");
-  const coinInstance = await coinFactory.deploy(tokenName);
+  const coinInstance = await coinFactory.deploy(tokenName, 2);
   console.info(`VAL_ADDR=${coinInstance.address.toLowerCase()}`);
 }
 
