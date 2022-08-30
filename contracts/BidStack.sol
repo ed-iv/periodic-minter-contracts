@@ -19,7 +19,6 @@ contract BidStack {
     Bid[] _bids;
     uint256 private _nextBidId = 1;
     mapping(uint256 => uint256) internal _bidIndexes;
-    uint256 private _highestBidId;
 
     modifier _ifBidExists(uint256 bidId){
         require(_bids[_bidIndexes[bidId]].bidder != address(0), "BidStack: Bid not exists");
@@ -116,11 +115,6 @@ contract BidStack {
 
     function _getBidById(uint256 bidId) internal view returns (Bid storage){
         return _bids[_bidIndexes[bidId]];
-    }
-
-    // allow to revoke all bids including highest
-    function _releaseBids() internal {
-        _highestBidId = 0;
     }
 
     function _getHighestBidId() internal view returns (uint256 bidId) {

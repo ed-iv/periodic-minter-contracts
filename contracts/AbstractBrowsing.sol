@@ -37,13 +37,11 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
 
   function createBid(
     bytes32 nonce,
-    string memory url,
+    string calldata url,
     bytes calldata signature
   ) external payable whenNotPaused returns (uint256 bidId){
     _verifySignature(nonce, _msgSender(), url, msg.value, _owner, signature);
-    if (hasValidBids()) {
-      _timestamp = block.timestamp + 86400;
-    }
+    if (hasValidBids()) _timestamp = block.timestamp + 86400;
     bidId = _pushNewBid(msg.value, _msgSender(), url);
     emit CreateBid(bidId, _msgSender(), msg.value);
   }
@@ -69,20 +67,10 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
   function mint() public {
     require(_timestamp < block.timestamp, "Not yet callable");
     require(_total > 0, "Limit exceeded");
-
     BidStack.Bid memory topBid = _popHighestBid();
-
     _total = _total - 1;
-
-    if (hasValidBids()) {
-      _timestamp = block.timestamp + 86400;
-    }
-    // console.log(">>", topBid.bidder);
+    if (hasValidBids()) _timestamp = block.timestamp + 86400;
     _factory.mint(topBid.bidder, topBid.url);
-
-    if(_total == 0){
-      _releaseBids();
-    }
   }
 
   function getStackInfo() external view returns (uint256 minBid, uint256 maxBid, uint256 timestamp, uint256 stackSize, uint256 total){
