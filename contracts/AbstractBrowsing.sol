@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -17,7 +16,7 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
   IERC721Abstract _factory;
   // TODO figure out better way
   uint256 private _total = 2;
-  uint256 private _timestamp;
+  uint256 private _auctionEndTime;
   address private _owner;
 
   event CreateBid(uint256 bidId, address indexed account, uint256 amount);
@@ -41,8 +40,9 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
     bytes calldata signature
   ) external payable whenNotPaused returns (uint256 bidId){
     _verifySignature(nonce, _msgSender(), url, msg.value, _owner, signature);
-    if (hasValidBids()) _timestamp = block.timestamp + 86400;
+    bool auctionInProgress = hasValidBids();
     bidId = _pushNewBid(msg.value, _msgSender(), url);
+    if (!auctionInProgress) _auctionEndTime = block.timestamp + 86400;
     emit CreateBid(bidId, _msgSender(), msg.value);
   }
 
@@ -65,18 +65,18 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
   }
 
   function mint() public {
-    require(_timestamp < block.timestamp, "Not yet callable");
+    require(_auctionEndTime < block.timestamp, "Not yet callable");
     require(_total > 0, "Limit exceeded");
     BidStack.Bid memory topBid = _popHighestBid();
     _total = _total - 1;
-    if (hasValidBids()) _timestamp = block.timestamp + 86400;
+    if (hasValidBids()) _auctionEndTime = block.timestamp + 86400;
     _factory.mint(topBid.bidder, topBid.url);
   }
 
   function getStackInfo() external view returns (uint256 minBid, uint256 maxBid, uint256 timestamp, uint256 stackSize, uint256 total){
     minBid = _getMinBid();
     maxBid = _getMaxBid();
-    timestamp = _timestamp;
+    timestamp = _auctionEndTime;
     stackSize = _bids.length;
     total = _total;
   }
