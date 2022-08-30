@@ -46,27 +46,4 @@ contract SignatureValidator is EIP712 {
   ) private view returns (bool) {
     return SignatureChecker.isValidSignatureNow(signer, digest, signature);
   }
-
-
-  // UPDATE or REVOKE
-
-  function _verifySignatureUpdateRevoke(
-    bytes32 nonce,
-    uint256 bidId,
-    address signer,
-    bytes calldata signature
-  ) internal {
-    require(!_expired[nonce], "SignatureValidator: Expired signature");
-    _expired[nonce] = true;
-
-    bool isVerified = _verify(signer, _hashUpdateRevoke(nonce, bidId), signature);
-    require(isVerified, "SignatureValidator: Invalid signature");
-  }
-
-  function _hashUpdateRevoke(
-    bytes32 nonce,
-    uint256 bidId
-  ) private view returns (bytes32) {
-    return _hashTypedDataV4(keccak256(abi.encode(PERMIT_SIGNATURE_UPDATEREVOKE, nonce, bidId)));
-  }
 }

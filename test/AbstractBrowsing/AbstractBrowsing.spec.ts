@@ -68,36 +68,6 @@ describe("AbstractBrowsing", function () {
     );
   };
 
-  const generateSignatureUpdateRevoke = (
-    network: Network,
-    verifierAddress: string,
-    owner: SignerWithAddress,
-    bidId: number,
-    customNonce = nonce,
-  ) => {
-    return owner._signTypedData(
-      // Domain
-      {
-        name: tokenName,
-        version: "1.0.0",
-        chainId: network.chainId,
-        verifyingContract: verifierAddress,
-      },
-      // Types
-      {
-        UPDATEREVOKE: [
-          { name: "nonce", type: "bytes32" },
-          { name: "bidId", type: "uint256" },
-        ],
-      },
-      // Value
-      {
-        nonce: customNonce,
-        bidId,
-      },
-    );
-  };
-
   describe("hasRole", function () {
     it("DEFAULT_ADMIN_ROLE", async function () {
       const { abstractInstance, owner } = await loadFixture(deployAbstractBrowsingFixture);
@@ -224,10 +194,9 @@ describe("AbstractBrowsing", function () {
   });
 
   describe("bid (update)", function () {
-    it("should update bid", async function () {
+    it("foo should update bid", async function () {
       const { abstractInstance, owner, receiver, network } = await loadFixture(deployAbstractBrowsingFixture);
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-      const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
       const signature1 = await generateSignature(network, abstractInstance.address, owner, receiver, 2, nonce1);
       const tx1 = abstractInstance.connect(receiver).createBid(nonce1, baseTokenURI, signature1, { value: amount * 2 });
@@ -237,8 +206,7 @@ describe("AbstractBrowsing", function () {
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(bidId, receiver.address, amount * 2);
 
-      const signature2 = await generateSignatureUpdateRevoke(network, abstractInstance.address, owner, bidId, nonce2);
-      const tx2 = abstractInstance.connect(receiver).updateBid(nonce2, bidId, signature2, { value: amount * 10 });
+      const tx2 = abstractInstance.connect(receiver).updateBid(bidId, { value: amount * 10 });
       await expect(tx2)
         .to.emit(abstractInstance, "UpdateBid")
         .withArgs(bidId, await receiver.getAddress(), amount * 12, amount * 10);
@@ -292,9 +260,7 @@ describe("AbstractBrowsing", function () {
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
 
-      const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-      const signature3 = await generateSignatureUpdateRevoke(network, abstractInstance.address, owner, 1, nonce3);
-      const tx3 = abstractInstance.connect(receiver).cancelBid(nonce3, 1, signature3);
+      const tx3 = abstractInstance.connect(receiver).cancelBid(1);
 
       await expect(tx3)
         .to.emit(abstractInstance, "CancelBid")
@@ -309,7 +275,6 @@ describe("AbstractBrowsing", function () {
       const { abstractInstance, owner, receiver, stranger, network } = await loadFixture(deployAbstractBrowsingFixture);
       const nonce1 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
       const nonce2 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-      const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
 
       const signature1 = await generateSignature(network, abstractInstance.address, owner, receiver, 2, nonce1);
       const tx1 = abstractInstance.connect(receiver).createBid(nonce1, baseTokenURI, signature1, { value: amount * 2 });
@@ -323,8 +288,7 @@ describe("AbstractBrowsing", function () {
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
 
-      const signature3 = await generateSignatureUpdateRevoke(network, abstractInstance.address, owner, 2, nonce3);
-      const tx3 = abstractInstance.connect(stranger).cancelBid(nonce3, 2, signature3);
+      const tx3 = abstractInstance.connect(stranger).cancelBid(2);
       await expect(tx3).to.be.revertedWithCustomError(abstractInstance, "CannotCancelHighBid");
     });
 
@@ -349,9 +313,7 @@ describe("AbstractBrowsing", function () {
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(2, stranger.address, amount * 3);
 
-      const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-      const signature3 = await generateSignatureUpdateRevoke(network, abstractInstance.address, owner, 1, nonce3);
-      const tx3 = abstractInstance.connect(stranger).cancelBid(nonce3, 1, signature3);
+      const tx3 = abstractInstance.connect(stranger).cancelBid(1);
 
       await expect(tx3).to.be.revertedWith(`Exchange: Not an owner`);
     });
@@ -481,9 +443,7 @@ describe("AbstractBrowsing", function () {
         .withArgs(2, stranger.address, amount * 3);
 
       // 1st update
-      const nonce3 = ethers.utils.hexlify(ethers.utils.randomBytes(32));
-      const signature3 = await generateSignatureUpdateRevoke(network, abstractInstance.address, owner, 1, nonce3);
-      const tx3 = abstractInstance.connect(receiver).updateBid(nonce3, 1, signature3, { value: amount * 10 });
+      const tx3 = abstractInstance.connect(receiver).updateBid(1, { value: amount * 10 });
       await expect(tx3)
         .to.emit(abstractInstance, "UpdateBid")
         .withArgs(1, await receiver.getAddress(), amount * 12, amount * 10);

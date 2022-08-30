@@ -48,31 +48,23 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
     emit CreateBid(bidId, _msgSender(), msg.value);
   }
 
-  function updateBid(
-    bytes32 nonce,
-    uint256 bidId,
-    bytes calldata signature
-  ) external payable whenNotPaused {
-    _verifySignatureUpdateRevoke(nonce, bidId,  _owner, signature);
+  // TODO - Test that sender must be bidder
+  function updateBid(uint256 bidId) external payable whenNotPaused {
     uint256 newAmount = _updateBid(bidId, msg.value);
     emit UpdateBid(bidId, msg.sender, newAmount, msg.value);
   }
 
-  function cancelBid(
-    bytes32 nonce,
-    uint256 bidId,
-    bytes calldata signature
-  ) external _ifBidExists(bidId) {
-    _verifySignatureUpdateRevoke(nonce, bidId,  _owner, signature);
+  function cancelBid(uint256 bidId) external _ifBidExists(bidId) nonReentrant {
     if (bidId == _getHighestBidId()) revert CannotCancelHighBid();
-    address account = _msgSender();
-    require(_getBidById(bidId).bidder == account, "Exchange: Not an owner");
-    uint256 amount = _cancelBid(bidId);
-    emit CancelBid(bidId, account, amount);
-    (bool sent, ) = account.call{ value: amount, gas: 20317 }("");
+    address bidder = _msgSender();
+    uint256 bidIndex = _bidIndexes[bidId];
+    Bid memory bid = _bids[bidIndex];
+    require(bid.bidder == bidder, "Exchange: Not an owner");
+    (bool sent, ) = bidder.call{ value: bid.amount }("");
+    delete _bids[bidIndex];
     require(sent, "Exchange: Failed to send Ether");
+    emit CancelBid(bidId, bidder, bid.amount);
   }
-
 
   function mint() public {
     require(_timestamp < block.timestamp, "Not yet callable");

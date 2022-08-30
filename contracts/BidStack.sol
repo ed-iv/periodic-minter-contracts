@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 import "hardhat/console.sol";
 
 error CannotCancelHighBid();
+error Unauthorized();
 
 contract BidStack {
     struct Bid {
@@ -17,7 +18,7 @@ contract BidStack {
 
     Bid[] _bids;
     uint256 private _nextBidId = 1;
-    mapping(uint256 => uint256) private  _bidIndexes;
+    mapping(uint256 => uint256) internal _bidIndexes;
     uint256 private _highestBidId;
 
     modifier _ifBidExists(uint256 bidId){
@@ -90,14 +91,6 @@ contract BidStack {
         id = _createBid(amount, bidder, url);
     }
 
-    // TODO - need to return funds associated with this bid to user
-    function _cancelBid(uint256 bidId) internal returns(uint256 amount) {
-        Bid storage bid = _getBidById(bidId);
-        amount = bid.amount;
-        _removeBid(bidId);
-        return amount;
-    }
-
     function _popHighestBid() internal returns (Bid memory){
         Bid memory bid = getHighestBid();
         delete _bidIndexes[bid.id];
@@ -111,22 +104,18 @@ contract BidStack {
 
     // TODO - Verify case where bidId is invalid
     function _updateBid(uint256 bidId, uint256 amount) internal returns(uint256) {
-        Bid storage bid = _getBidById(bidId);
+        uint256 bidIndex = _bidIndexes[bidId];
+        Bid memory bid = _bids[bidIndex];
         require(bid.bidder == msg.sender, "BidStack: Restrict to bids owner only");
-        _pushNewBid(bid.amount + amount, bid.bidder, bid.url);
-        _cancelBid(bidId);
-        return bid.amount + amount;
+        bid.amount += amount;
+        _pushNewBid(bid.amount, bid.bidder, bid.url);
+        delete _bids[bidIndex];
+        // _cancelBid(bidId);
+        return bid.amount;
     }
 
     function _getBidById(uint256 bidId) internal view returns (Bid storage){
         return _bids[_bidIndexes[bidId]];
-    }
-
-    function _removeBid(uint256 bidId) internal {
-        require(bidId != _highestBidId, "BidStack: Highest bid could not be revoked");
-        // Invalidate bid
-        _getBidById(bidId).bidder = address(0);
-        delete _bidIndexes[bidId];
     }
 
     // allow to revoke all bids including highest
