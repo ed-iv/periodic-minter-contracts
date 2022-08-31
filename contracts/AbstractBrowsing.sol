@@ -35,11 +35,11 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
   }
 
   function createBid(
-    bytes32 nonce,
     string calldata url,
+    string calldata tokenUri,
     bytes calldata signature
   ) external payable whenNotPaused returns (uint256 bidId){
-    _verifySignature(nonce, _msgSender(), url, msg.value, _owner, signature);
+    _verifySignature(url, tokenUri, _owner, signature);
     bool auctionInProgress = hasValidBids();
     bidId = _pushNewBid(msg.value, _msgSender(), url);
     if (!auctionInProgress) _auctionEndTime = block.timestamp + 86400;
