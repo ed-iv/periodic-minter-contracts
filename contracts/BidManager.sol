@@ -1,38 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 import "hardhat/console.sol";
-import "./BidVerifier.sol";
 
 error CannotCancelHighBid();
 error Unauthorized();
 
-contract BidManager is BidVerifier {
-    struct Bid {
-        address bidder;
-        uint256 id;
-        string url;
-        uint256 amount;
-    }
-
+contract BidManager {
     uint256 private _minBidIncrease = 500;
     uint256 private _minBid = 100000000000000; // 0.0001 eth
 
     mapping(bytes32 => uint256) internal _bids;
     bytes32[] internal _bidStack;
-    /// Mapping of bidId => bidAmount
-    uint256 private _nextBidId = 1;
-    mapping(uint256 => uint256) internal _bidIndexes;
 
-    // modifier _ifBidExists(uint256 bidId){
-    //     require(_bidStack[_bidIndexes[bidId]].bidder != address(0), "BidStack: Bid not exists");
-    //     _;
-    // }
-
-    constructor(string memory name) BidVerifier(name){
+    constructor() {
         // add a empty bid to start with 1 index
-        // for(uint i = 0; i < 1000; i++) {
         _bidStack.push(0x0);
-        // }
     }
 
     function getHighestBidAmount() public view returns (uint256){
@@ -57,18 +39,6 @@ contract BidManager is BidVerifier {
         minBid = highestBidAmount + highestBidAmount * _minBidIncrease / 10000;
     }
 
-    function _getMaxBid() internal view returns(uint256 maxBid){
-        return  getHighestBidAmount();
-    }
-
-    function _getBidId(
-        address bidder,
-        string calldata url,
-        string calldata tokenUri
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(bidder, url, tokenUri ));
-    }
-
     function _createBid(bytes32 bidId, uint256 amount) internal {
         uint256 minBid = _getMinBid();
         require(amount >= _minBid, "BidStack: Bid should be higher than minimum");
@@ -77,42 +47,28 @@ contract BidManager is BidVerifier {
         _bidStack.push(bidId);
     }
 
-    // function _pushNewBid(
-    //     uint256 amount,
-    //     address bidder,
-    //     string calldata url,
-    //     string calldata tokenUri
-    // ) internal returns (uint256 id) {
-
-    //     id = _createBid(amount, bidder, url);
-    // }
-
+    /// @notice Pop bidIds off of the top of the stack until we either reach one that is valid
+    /// or no bids are left (except for dummy bid).
     function _popBidStack() internal {
         while (_bidStack.length > 1 && !_isValidBid(_bidStack[_bidStack.length-1])) {
-          _bidStack.pop();
+            _bidStack.pop();
         }
     }
 
-    // // TODO - Verify case where bidId is invalid
-    // function _updateBid(uint256 bidId, uint256 amount) internal returns(uint256) {
-    //     uint256 bidIndex = _bidIndexes[bidId];
-    //     Bid memory bid = _bidStack[bidIndex];
-    //     require(bid.bidder == msg.sender, "BidStack: Restrict to bids owner only");
-    //     bid.amount += amount;
-    //     _pushNewBid(bid.amount, bid.bidder, bid.url);
-    //     delete _bidStack[bidIndex];
-    //     // _cancelBid(bidId);
-    //     return bid.amount;
-    // }
-
-    // function _getBidById(uint256 bidId) internal view returns (Bid storage){
-    //     return _bidStack[_bidIndexes[bidId]];
-    // }
+    /// @notice Hash the provided params to computer the bidId.
+    function _getBidId(
+        address bidder,
+        string calldata url,
+        string calldata tokenUri
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(bidder, url, tokenUri ));
+    }
 
     function _getHighestBidId() internal view returns (bytes32 bidId) {
         return _bidStack[_bidStack.length-1];
     }
 
+    /// @notice Test if a given bidId represents a valid bid.
     function _isValidBid(bytes32 bidId) internal view returns (bool) {
         return _bids[bidId] > 0;
     }
