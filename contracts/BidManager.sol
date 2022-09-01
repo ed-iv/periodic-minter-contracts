@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 import "hardhat/console.sol";
+import "./BidVerifier.sol";
 
 error CannotCancelHighBid();
 error Unauthorized();
 
-contract BidStack {
+contract BidManager is BidVerifier {
     struct Bid {
         address bidder;
         uint256 id;
@@ -25,7 +26,7 @@ contract BidStack {
         _;
     }
 
-    constructor(){
+    constructor(string memory name) BidVerifier(name){
         // add a empty bid to start with 1 index
         _bids.push(Bid(address(0), 0, "", 0));
     }

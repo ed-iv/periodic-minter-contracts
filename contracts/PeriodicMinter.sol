@@ -6,11 +6,10 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "./BidStack.sol";
-import "./SignatureValidator.sol";
+import "./BidManager.sol";
 import "./interfaces/IERC721Abstract.sol";
 
-contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack, SignatureValidator {
+contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager {
   using Address for address;
 
   IERC721Abstract _factory;
@@ -24,7 +23,7 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
   event CancelBid(uint256 bidId, address indexed account, uint256 amount);
   event Withdrawn(address indexed account, uint256 amount);
 
-  constructor(string memory name) SignatureValidator(name) {
+  constructor(string memory name) BidManager(name) {
     _owner = _msgSender();
     _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
   }
@@ -67,18 +66,10 @@ contract AbstractBrowsing is AccessControl, Pausable, ReentrancyGuard, BidStack,
   function mint() public {
     require(_auctionEndTime < block.timestamp, "Not yet callable");
     require(_total > 0, "Limit exceeded");
-    BidStack.Bid memory topBid = _popHighestBid();
+    Bid memory topBid = _popHighestBid();
     _total = _total - 1;
     if (hasValidBids()) _auctionEndTime = block.timestamp + 86400;
     _factory.mint(topBid.bidder, topBid.url);
-  }
-
-  function getStackInfo() external view returns (uint256 minBid, uint256 maxBid, uint256 timestamp, uint256 stackSize, uint256 total){
-    minBid = _getMinBid();
-    maxBid = _getMaxBid();
-    timestamp = _auctionEndTime;
-    stackSize = _bids.length;
-    total = _total;
   }
 
   function pause() public virtual onlyRole(DEFAULT_ADMIN_ROLE) {

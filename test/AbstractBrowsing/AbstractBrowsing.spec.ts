@@ -6,14 +6,14 @@ import { Network } from "@ethersproject/networks";
 
 import { amount, baseTokenURI, DEFAULT_ADMIN_ROLE, MINTER_ROLE, tokenId, tokenName, tokenSymbol } from "../constants";
 
-describe("AbstractBrowsing", function () {
+describe("PeriodicMinter", function () {
   async function deployAbstractBrowsingFixture() {
     const [owner, receiver, stranger] = await ethers.getSigners();
 
     const erc721Factory = await ethers.getContractFactory("ERC721Test");
     const erc721Instance = await erc721Factory.deploy(tokenName, tokenSymbol);
 
-    const abstractFactory = await ethers.getContractFactory("AbstractBrowsing");
+    const abstractFactory = await ethers.getContractFactory("PeriodicMinter");
     const abstractInstance = await abstractFactory.deploy(tokenName);
 
     await abstractInstance.setFactory(erc721Instance.address);

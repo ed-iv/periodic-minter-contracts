@@ -5,9 +5,7 @@ pragma solidity ^0.8.9;
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
-contract SignatureValidator is EIP712 {
-  using Address for address;
-
+contract BidVerifier is EIP712 {
   bytes32 private constant PERMIT_SIGNATURE = keccak256("createBid(string url,string tokenUri)");
   constructor(string memory name) EIP712(name, "1.0.0") {}
 
@@ -16,7 +14,7 @@ contract SignatureValidator is EIP712 {
     require(isVerified, "SignatureValidator: Invalid signature");
   }
 
-  function _hash(string memory url, string memory tokenUri) private view returns (bytes32) {
+  function _hash(string memory url, string memory tokenUri) internal view returns (bytes32) {
     return _hashTypedDataV4(keccak256(abi.encode(
       PERMIT_SIGNATURE,
       keccak256(bytes(url)),
@@ -24,7 +22,7 @@ contract SignatureValidator is EIP712 {
     )));
   }
 
-  function _verify(address signer, bytes32 digest, bytes memory signature) private view returns (bool) {
+  function _verify(address signer, bytes32 digest, bytes memory signature) internal view returns (bool) {
     return SignatureChecker.isValidSignatureNow(signer, digest, signature);
   }
 }
