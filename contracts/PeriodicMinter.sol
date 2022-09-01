@@ -55,10 +55,10 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager 
     if (bidId == _getHighestBidId()) revert CannotCancelHighBid();
     address bidder = _msgSender();
     uint256 bidIndex = _bidIndexes[bidId];
-    Bid memory bid = _bids[bidIndex];
+    Bid memory bid = _bidStack[bidIndex];
     require(bid.bidder == bidder, "Exchange: Not an owner");
     (bool sent, ) = bidder.call{ value: bid.amount }("");
-    delete _bids[bidIndex];
+    delete _bidStack[bidIndex];
     require(sent, "Exchange: Failed to send Ether");
     emit CancelBid(bidId, bidder, bid.amount);
   }
