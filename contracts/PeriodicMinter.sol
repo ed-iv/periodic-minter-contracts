@@ -5,9 +5,12 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "hardhat/console.sol";
 
 import "./BidManager.sol";
 import "./interfaces/IERC721Abstract.sol";
+
+error InvalidBidId();
 
 contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager {
   using Address for address;
@@ -18,9 +21,9 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager 
   uint256 private _auctionEndTime;
   address private _owner;
 
-  event CreateBid(uint256 bidId, address indexed account, uint256 amount);
-  event UpdateBid(uint256 bidId, address indexed account, uint256 newAmount, uint256 addition);
-  event CancelBid(uint256 bidId, address indexed account, uint256 amount);
+  event CreateBid(bytes32 bidId, address indexed account, uint256 amount);
+  event UpdateBid(bytes32 bidId, address indexed account, uint256 newAmount, uint256 addition);
+  event CancelBid(bytes32 bidId, address indexed account, uint256 amount);
   event Withdrawn(address indexed account, uint256 amount);
 
   constructor(string memory name) BidManager(name) {
@@ -37,39 +40,49 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager 
     string calldata url,
     string calldata tokenUri,
     bytes calldata signature
-  ) external payable whenNotPaused returns (uint256 bidId){
+  ) external payable whenNotPaused {
     _verifySignature(url, tokenUri, _owner, signature);
-    bool auctionInProgress = hasValidBids();
-    bidId = _pushNewBid(msg.value, _msgSender(), url);
-    if (!auctionInProgress) _auctionEndTime = block.timestamp + 86400;
+    bytes32 bidId = _getBidId(_msgSender(), url, tokenUri);
+    if (!hasValidBids()) _auctionEndTime = block.timestamp + 86400;
+    _createBid(bidId, msg.value);
     emit CreateBid(bidId, _msgSender(), msg.value);
   }
 
-  // TODO - Test that sender must be bidder
-  function updateBid(uint256 bidId) external payable whenNotPaused {
-    uint256 newAmount = _updateBid(bidId, msg.value);
-    emit UpdateBid(bidId, msg.sender, newAmount, msg.value);
+  // // TODO - Test that sender must be bidder
+  function updateBid(string calldata url, string calldata tokenUri) external payable whenNotPaused {
+    bytes32 bidId = _getBidId(_msgSender(), url, tokenUri);
+    uint256 currAmount = _bids[bidId];
+    require(currAmount > 0, "Bid does not exist");
+    _createBid(bidId, msg.value);
+    emit UpdateBid(bidId, msg.sender, currAmount + msg.value, msg.value);
   }
 
-  function cancelBid(uint256 bidId) external _ifBidExists(bidId) nonReentrant {
-    if (bidId == _getHighestBidId()) revert CannotCancelHighBid();
+  // TODO - replace _ifbidexists
+  function cancelBid(string calldata url, string calldata tokenUri) external nonReentrant {
     address bidder = _msgSender();
-    uint256 bidIndex = _bidIndexes[bidId];
-    Bid memory bid = _bidStack[bidIndex];
-    require(bid.bidder == bidder, "Exchange: Not an owner");
-    (bool sent, ) = bidder.call{ value: bid.amount }("");
-    delete _bidStack[bidIndex];
+    bytes32 bidId = _getBidId(bidder, url, tokenUri);
+    if (bidId == _getHighestBidId()) revert CannotCancelHighBid();
+    uint256 bidAmount = _bids[bidId];
+    if (bidAmount == 0) revert InvalidBidId();
+    delete _bids[bidId];
+
+    (bool sent, ) = bidder.call{ value: bidAmount }("");
     require(sent, "Exchange: Failed to send Ether");
-    emit CancelBid(bidId, bidder, bid.amount);
+
+    emit CancelBid(bidId, bidder, bidAmount);
   }
 
-  function mint() public {
+  function mint(address bidder, string calldata url, string calldata tokenUri) public {
     require(_auctionEndTime < block.timestamp, "Not yet callable");
     require(_total > 0, "Limit exceeded");
-    Bid memory topBid = _popHighestBid();
+    bytes32 bidId = _getBidId(bidder, url, tokenUri);
+    bytes32 highestBidId = _getHighestBidId();
+    if (bidId != highestBidId) revert InvalidBidId();
     _total = _total - 1;
+    delete _bids[bidId];
+    _popBidStack();
     if (hasValidBids()) _auctionEndTime = block.timestamp + 86400;
-    _factory.mint(topBid.bidder, topBid.url);
+    _factory.mint(bidder, tokenUri);
   }
 
   function pause() public virtual onlyRole(DEFAULT_ADMIN_ROLE) {

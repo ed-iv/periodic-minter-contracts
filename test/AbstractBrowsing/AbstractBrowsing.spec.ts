@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
@@ -24,6 +25,9 @@ describe("PeriodicMinter", function () {
     return { owner, receiver, stranger, erc721Instance, abstractInstance, network };
   }
 
+  const getBidId = (address: string, url: string, tokenUri: string): string => {
+    return ethers.utils.solidityKeccak256(["address", "string", "string"], [address, url, tokenUri]);
+  };
   const generateSignature = (network: Network, verifierAddress: string, owner: SignerWithAddress) => {
     return owner._signTypedData(
       // Domain
@@ -60,60 +64,61 @@ describe("PeriodicMinter", function () {
     it("foo should make first bid", async function () {
       const { abstractInstance, owner, receiver, network } = await loadFixture(deployAbstractBrowsingFixture);
       const signature = await generateSignature(network, abstractInstance.address, owner);
+      const bidId = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId, receiver.address, amount * 2);
 
-      const highest = await abstractInstance.getHighestBid();
-      expect(highest.bidder).to.equal(receiver.address);
-      expect(highest.amount).to.equal(amount * 2);
+      const highest = await abstractInstance.getHighestBidAmount();
+      expect(highest).to.equal(amount * 2);
     });
 
     it("should make second bid", async function () {
       const { abstractInstance, owner, receiver, stranger, network } = await loadFixture(deployAbstractBrowsingFixture);
       const signature1 = await generateSignature(network, abstractInstance.address, owner);
 
+      const bidId1 = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
 
+      const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
       const tx2 = abstractInstance
         .connect(stranger)
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3);
 
-      const highest = await abstractInstance.getHighestBid();
-      expect(highest.bidder).to.equal(stranger.address);
-      expect(highest.amount).to.equal(amount * 3);
+      const highest = await abstractInstance.getHighestBidAmount();
+      expect(highest).to.equal(amount * 3);
     });
 
     it("should fail: Bid amount lower then highest (equal)", async function () {
       const { abstractInstance, owner, receiver, stranger, network } = await loadFixture(deployAbstractBrowsingFixture);
       const signature1 = await generateSignature(network, abstractInstance.address, owner);
 
+      const bidId = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
-
       const tx2 = abstractInstance
         .connect(stranger)
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 2 });
@@ -125,13 +130,14 @@ describe("PeriodicMinter", function () {
       const { abstractInstance, owner, receiver, stranger, network } = await loadFixture(deployAbstractBrowsingFixture);
       const signature1 = await generateSignature(network, abstractInstance.address, owner);
 
+      const bidId = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
 
@@ -141,21 +147,6 @@ describe("PeriodicMinter", function () {
 
       await expect(tx2).to.be.revertedWith(`BidStack: Bid should be 5% higher`);
     });
-
-    // it("should fail: Expired signature", async function () {
-    //   const { abstractInstance, owner, receiver, stranger, network } = await loadFixture(deployAbstractBrowsingFixture);
-    //   const signature = await generateSignature(network, abstractInstance.address, owner);
-
-    //   const tx1 = abstractInstance.connect(receiver).createBid(baseTokenURI, baseTokenURI, signature, { value: amount * 2 });
-
-    //   await expect(tx1)
-    //     .to.emit(abstractInstance, "CreateBid")
-    //     .withArgs(1, receiver.address, amount * 2);
-
-    //   const tx2 = abstractInstance.connect(stranger).createBid(baseTokenURI, baseTokenURI, signature, { value: amount * 2 });
-
-    //   await expect(tx2).to.be.revertedWith(`SignatureValidator: Expired signature`);
-    // });
 
     it("should fail: Invalid signature", async function () {
       const { abstractInstance, owner, receiver, network } = await loadFixture(deployAbstractBrowsingFixture);
@@ -181,37 +172,38 @@ describe("PeriodicMinter", function () {
   describe("bid (update)", function () {
     it("should update bid", async function () {
       const { abstractInstance, owner, receiver, network } = await loadFixture(deployAbstractBrowsingFixture);
-      const signature1 = await generateSignature(network, abstractInstance.address, owner);
+      const signature = await generateSignature(network, abstractInstance.address, owner);
+
+      const bidId = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
-        .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
+        .createBid(baseTokenURI, baseTokenURI, signature, { value: amount * 2 });
 
-      const bidId = 1;
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
         .withArgs(bidId, receiver.address, amount * 2);
 
-      const tx2 = abstractInstance.connect(receiver).updateBid(bidId, { value: amount * 10 });
+      const tx2 = abstractInstance.connect(receiver).updateBid(baseTokenURI, baseTokenURI, { value: amount * 10 });
       await expect(tx2)
         .to.emit(abstractInstance, "UpdateBid")
         .withArgs(bidId, await receiver.getAddress(), amount * 12, amount * 10);
 
-      const highest = await abstractInstance.getHighestBid();
-
-      expect(highest.bidder).to.equal(receiver.address);
-      expect(highest.amount).to.equal(amount * 12);
+      const highest = await abstractInstance.getHighestBidAmount();
+      expect(highest).to.equal(amount * 12);
     });
 
     it("should fail: Not enough bid value", async function () {
       const { abstractInstance, owner, receiver, stranger, network } = await loadFixture(deployAbstractBrowsingFixture);
-      const signature1 = await generateSignature(network, abstractInstance.address, owner);
+      const signature = await generateSignature(network, abstractInstance.address, owner);
+
+      const bidId = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
-        .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
+        .createBid(baseTokenURI, baseTokenURI, signature, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
 
@@ -226,85 +218,90 @@ describe("PeriodicMinter", function () {
   describe("cancelBid", function () {
     it("should revoke", async function () {
       const { abstractInstance, owner, receiver, stranger, network } = await loadFixture(deployAbstractBrowsingFixture);
-      const signature1 = await generateSignature(network, abstractInstance.address, owner);
 
+      const signature1 = await generateSignature(network, abstractInstance.address, owner);
+      const bidId1 = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
-
+      const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
       const tx2 = abstractInstance
         .connect(stranger)
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3);
 
-      const tx3 = abstractInstance.connect(receiver).cancelBid(1);
-
+      // TODO - Test that funds are returned correctly
+      const tx3 = abstractInstance.connect(receiver).cancelBid(baseTokenURI, baseTokenURI);
       await expect(tx3)
         .to.emit(abstractInstance, "CancelBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2);
 
-      const highest = await abstractInstance.getHighestBid();
-      expect(highest.bidder).to.equal(stranger.address);
-      expect(highest.amount).to.equal(amount * 3);
+      const highest = await abstractInstance.getHighestBidAmount();
+      expect(highest).to.equal(amount * 3);
     });
 
     it("should fail: Can't remove highest bid", async function () {
       const { abstractInstance, owner, receiver, stranger, network } = await loadFixture(deployAbstractBrowsingFixture);
+
       const signature1 = await generateSignature(network, abstractInstance.address, owner);
+      const bidId1 = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
+      const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
       const tx2 = abstractInstance
         .connect(stranger)
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3);
 
-      const tx3 = abstractInstance.connect(stranger).cancelBid(2);
+      const tx3 = abstractInstance.connect(stranger).cancelBid(baseTokenURI, baseTokenURI);
       await expect(tx3).to.be.revertedWithCustomError(abstractInstance, "CannotCancelHighBid");
     });
 
     it("should fail: Not an owner", async function () {
       const { abstractInstance, owner, receiver, stranger, network } = await loadFixture(deployAbstractBrowsingFixture);
-      const signature1 = await generateSignature(network, abstractInstance.address, owner);
 
+      const signature1 = await generateSignature(network, abstractInstance.address, owner);
+      const bidId1 = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
-
+      const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
       const tx2 = abstractInstance
         .connect(stranger)
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3);
 
-      const tx3 = abstractInstance.connect(stranger).cancelBid(1);
-
-      await expect(tx3).to.be.revertedWith(`Exchange: Not an owner`);
+      const tx3 = abstractInstance.connect(stranger).cancelBid(baseTokenURI, "bogus");
+      await expect(tx3).to.be.revertedWithCustomError(abstractInstance, "InvalidBidId");
     });
+
+    // TODO - Need to update tests to use different urls & tokenUris
   });
 
   describe("mint", function () {
@@ -314,97 +311,91 @@ describe("PeriodicMinter", function () {
       );
 
       const signature = await generateSignature(network, abstractInstance.address, owner);
+      const bidId1 = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature, { value: amount * 2 });
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2);
 
       await time.increase(86400);
-      const tx2 = abstractInstance.mint();
 
+      const tx2 = abstractInstance.mint(receiver.address, baseTokenURI, baseTokenURI);
       await expect(tx2)
         .to.emit(erc721Instance, "Transfer")
         .withArgs(ethers.constants.AddressZero, receiver.address, tokenId);
-
-      const highest = await abstractInstance.getHighestBid();
-      expect(highest.bidder).to.equal(ethers.constants.AddressZero);
-      expect(highest.amount).to.equal(0);
+      const highest = await abstractInstance.getHighestBidAmount();
+      expect(highest).to.equal(0);
     });
 
     it("should mint after second bid", async function () {
       const { abstractInstance, erc721Instance, owner, receiver, stranger, network } = await loadFixture(
         deployAbstractBrowsingFixture,
       );
-      const signature1 = await generateSignature(network, abstractInstance.address, owner);
 
+      const signature1 = await generateSignature(network, abstractInstance.address, owner);
+      const bidId1 = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
-
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
-
+      const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
       const tx2 = abstractInstance
         .connect(stranger)
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
-
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3);
+
       await time.increase(86400);
 
-      const tx3 = abstractInstance.mint();
-
+      const tx3 = abstractInstance.mint(stranger.address, baseTokenURI, baseTokenURI);
       await expect(tx3)
         .to.emit(erc721Instance, "Transfer")
         .withArgs(ethers.constants.AddressZero, stranger.address, tokenId);
 
-      const highest = await abstractInstance.getHighestBid();
-      expect(highest.bidder).to.equal(receiver.address);
-      expect(highest.amount).to.equal(amount * 2);
+      const highest = await abstractInstance.getHighestBidAmount();
+      expect(highest).to.equal(amount * 2);
     });
 
     it("should mint twice after second bid", async function () {
       const { abstractInstance, erc721Instance, owner, receiver, stranger, network } = await loadFixture(
         deployAbstractBrowsingFixture,
       );
-      const signature1 = await generateSignature(network, abstractInstance.address, owner);
 
+      const signature1 = await generateSignature(network, abstractInstance.address, owner);
+      const bidId1 = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
-
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
-
+      const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
       const tx2 = abstractInstance
         .connect(stranger)
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
-
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3);
 
       await time.increase(86400);
 
-      const tx3 = abstractInstance.mint();
-
+      const tx3 = abstractInstance.mint(stranger.address, baseTokenURI, baseTokenURI);
       await expect(tx3)
         .to.emit(erc721Instance, "Transfer")
         .withArgs(ethers.constants.AddressZero, stranger.address, tokenId);
 
       await time.increase(86400);
 
-      const tx4 = abstractInstance.mint();
-
+      const tx4 = abstractInstance.mint(receiver.address, baseTokenURI, baseTokenURI);
       await expect(tx4).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, receiver.address, 2);
     });
 
@@ -412,77 +403,70 @@ describe("PeriodicMinter", function () {
       const { abstractInstance, erc721Instance, owner, receiver, stranger, network } = await loadFixture(
         deployAbstractBrowsingFixture,
       );
-      const signature1 = await generateSignature(network, abstractInstance.address, owner);
 
-      // 1 bid
+      // Bid 1 (User A)
+      const signature1 = await generateSignature(network, abstractInstance.address, owner);
+      const bidId1 = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
-
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
-      // await testgetStackInfo({});
+        .withArgs(bidId1, receiver.address, amount * 2);
 
-      // 2nd bid
+      // Bid 2 (User B)
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
-
+      const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
       const tx2 = abstractInstance
         .connect(stranger)
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
-
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3);
 
-      // 1st update
-      const tx3 = abstractInstance.connect(receiver).updateBid(1, { value: amount * 10 });
+      // Update Bid 1 (User A)
+      const tx3 = abstractInstance.connect(receiver).updateBid(baseTokenURI, baseTokenURI, { value: amount * 10 });
       await expect(tx3)
         .to.emit(abstractInstance, "UpdateBid")
-        .withArgs(1, await receiver.getAddress(), amount * 12, amount * 10);
+        .withArgs(bidId1, await receiver.getAddress(), amount * 12, amount * 10);
 
-      // mint 1
       await time.increase(86400);
 
-      const tx4 = abstractInstance.mint();
-
+      // mint 1
+      const tx4 = abstractInstance.mint(receiver.address, baseTokenURI, baseTokenURI);
       await expect(tx4)
         .to.emit(erc721Instance, "Transfer")
         .withArgs(ethers.constants.AddressZero, receiver.address, tokenId);
 
-      // mint 2
       await time.increase(86400);
 
-      const tx5 = abstractInstance.mint();
-
+      // mint 2
+      const tx5 = abstractInstance.mint(stranger.address, baseTokenURI, baseTokenURI);
       await expect(tx5).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, stranger.address, 2);
     });
 
-    it("should fail: Not yet callable", async function () {
+    it("foo should fail: Not yet callable", async function () {
       const { abstractInstance, owner, receiver, stranger, network } = await loadFixture(deployAbstractBrowsingFixture);
 
       const signature1 = await generateSignature(network, abstractInstance.address, owner);
-
+      const bidId1 = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
-
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
-
+      const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
       const tx2 = abstractInstance
         .connect(stranger)
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
-
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3);
 
-      const tx3 = abstractInstance.mint();
-
+      const tx3 = abstractInstance.mint(stranger.address, baseTokenURI, baseTokenURI);
       await expect(tx3).to.be.revertedWith(`Not yet callable`);
     });
 
@@ -490,45 +474,49 @@ describe("PeriodicMinter", function () {
       const { abstractInstance, erc721Instance, owner, receiver, stranger, network } = await loadFixture(
         deployAbstractBrowsingFixture,
       );
+
       const signature1 = await generateSignature(network, abstractInstance.address, owner);
+      const bidId1 = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
+      const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
       const tx2 = abstractInstance
         .connect(stranger)
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3);
 
       const signature3 = await generateSignature(network, abstractInstance.address, owner);
+      const bidId3 = getBidId(owner.address, baseTokenURI, baseTokenURI);
       const tx3 = abstractInstance
         .connect(owner)
         .createBid(baseTokenURI, baseTokenURI, signature3, { value: amount * 4 });
       await expect(tx3)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(3, owner.address, amount * 4);
+        .withArgs(bidId3, owner.address, amount * 4);
 
       await time.increase(86400);
 
-      const tx4 = abstractInstance.mint();
+      const tx4 = abstractInstance.mint(owner.address, baseTokenURI, baseTokenURI);
       await expect(tx4)
         .to.emit(erc721Instance, "Transfer")
         .withArgs(ethers.constants.AddressZero, owner.address, tokenId);
 
       await time.increase(86400);
 
-      const tx5 = abstractInstance.mint();
+      const tx5 = abstractInstance.mint(stranger.address, baseTokenURI, baseTokenURI);
       await expect(tx5).to.emit(erc721Instance, "Transfer").withArgs(ethers.constants.AddressZero, stranger.address, 2);
+
       await time.increase(86400);
 
-      const tx6 = abstractInstance.mint();
-
+      const tx6 = abstractInstance.mint(receiver.address, baseTokenURI, baseTokenURI);
       await expect(tx6).to.be.revertedWith(`Limit exceeded`);
     });
   });
@@ -543,14 +531,16 @@ describe("PeriodicMinter", function () {
     });
 
     it("should withdraw", async function () {
+      // TODO - should not be able to withdraw users funds until bid has been consumed
       const { abstractInstance, owner, receiver, network } = await loadFixture(deployAbstractBrowsingFixture);
-      const signature = await generateSignature(network, abstractInstance.address, owner);
 
+      const signature = await generateSignature(network, abstractInstance.address, owner);
+      const bidId = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature, { value: amount });
 
-      await expect(tx1).to.emit(abstractInstance, "CreateBid").withArgs(1, receiver.address, amount);
+      await expect(tx1).to.emit(abstractInstance, "CreateBid").withArgs(bidId, receiver.address, amount);
 
       const tx = abstractInstance.withdraw();
       await expect(tx).to.emit(abstractInstance, "Withdrawn").withArgs(owner.address, amount);
