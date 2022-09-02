@@ -523,8 +523,8 @@ describe("PeriodicMinter", function () {
 
   describe("withdraw", function () {
     it("should fail: account is missing role", async function () {
-      const { abstractInstance, receiver } = await loadFixture(deployAbstractBrowsingFixture);
-      const tx = abstractInstance.connect(receiver).withdraw();
+      const { abstractInstance, owner, receiver } = await loadFixture(deployAbstractBrowsingFixture);
+      const tx = abstractInstance.connect(receiver).withdraw(owner.address);
       await expect(tx).to.be.revertedWith(
         `AccessControl: account ${receiver.address.toLowerCase()} is missing role ${DEFAULT_ADMIN_ROLE}`,
       );
@@ -532,17 +532,25 @@ describe("PeriodicMinter", function () {
 
     it("should withdraw", async function () {
       // TODO - should not be able to withdraw users funds until bid has been consumed
-      const { abstractInstance, owner, receiver, network } = await loadFixture(deployAbstractBrowsingFixture);
+      const { abstractInstance, erc721Instance, owner, receiver, network } = await loadFixture(
+        deployAbstractBrowsingFixture,
+      );
 
       const signature = await generateSignature(network, abstractInstance.address, owner);
       const bidId = getBidId(receiver.address, baseTokenURI, baseTokenURI);
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature, { value: amount });
-
       await expect(tx1).to.emit(abstractInstance, "CreateBid").withArgs(bidId, receiver.address, amount);
 
-      const tx = abstractInstance.withdraw();
+      await time.increase(86400);
+
+      const mintTx = abstractInstance.mint(receiver.address, baseTokenURI, baseTokenURI);
+      await expect(mintTx)
+        .to.emit(erc721Instance, "Transfer")
+        .withArgs(ethers.constants.AddressZero, receiver.address, tokenId);
+
+      const tx = abstractInstance.withdraw(owner.address);
       await expect(tx).to.emit(abstractInstance, "Withdrawn").withArgs(owner.address, amount);
       const balance = await abstractInstance.provider.getBalance(abstractInstance.address);
       expect(balance).to.equal(0);
