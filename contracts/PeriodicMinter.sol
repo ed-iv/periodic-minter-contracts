@@ -50,7 +50,7 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
 
   function updateBid(string calldata url, string calldata tokenUri) external payable whenNotPaused {
       bytes32 bidId = _getBidId(_msgSender(), url, tokenUri);
-      uint256 currAmount = _bids[bidId];
+      uint256 currAmount = _bids[bidId].amount;
       require(currAmount > 0, "Bid does not exist");
       _createBid(bidId, msg.value);
       emit UpdateBid(bidId, msg.sender, currAmount + msg.value, msg.value);
@@ -59,11 +59,10 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
   function cancelBid(string calldata url, string calldata tokenUri) external nonReentrant {
       address bidder = _msgSender();
       bytes32 bidId = _getBidId(bidder, url, tokenUri);
-      if (bidId == _getHighestBidId()) revert CannotCancelHighBid();
-      uint256 bidAmount = _bids[bidId];
+      if (bidId == _highBidId) revert CannotCancelHighBid();
+      uint256 bidAmount = _bids[bidId].amount;
       if (bidAmount == 0) revert InvalidBidId();
-      delete _bids[bidId];
-
+      _removeBid(bidId);
       (bool sent, ) = bidder.call{ value: bidAmount }("");
       require(sent, "Exchange: Failed to send Ether");
 
@@ -74,11 +73,10 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
       require(_auctionEndTime < block.timestamp, "Not yet callable");
       require(_total > 0, "Limit exceeded");
       bytes32 bidId = _getBidId(bidder, url, tokenUri);
-      bytes32 highestBidId = _getHighestBidId();
+      bytes32 highestBidId = _highBidId;
       if (bidId != highestBidId) revert InvalidBidId();
       _total = _total - 1;
-      delete _bids[bidId];
-      _popBidStack();
+      _removeBid(bidId);
       if (hasValidBids()) _auctionEndTime = block.timestamp + 86400;
       _factory.mint(bidder, tokenUri);
   }
