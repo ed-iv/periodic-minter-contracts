@@ -8,7 +8,7 @@ error Unauthorized();
 contract BidManager {
     uint256 private _minBidIncrease = 500;
     uint256 private _minBid = 100000000000000; // 0.0001 eth
-    BidId internal _highBidId = BidId.wrap(0x0);
+    BidId public highBidId = BidId.wrap(0x0);
 
     type BidId is bytes32;
 
@@ -18,12 +18,12 @@ contract BidManager {
         uint256 amount;
     }
 
-    mapping(BidId => Bid) internal _bids;
+    mapping(BidId => Bid) public bids;
 
     constructor() {}
 
     function getHighestBidAmount() public view returns (uint256){
-        return _bids[_highBidId].amount;
+        return bids[highBidId].amount;
     }
 
     /**
@@ -34,7 +34,7 @@ contract BidManager {
     * a valid bid in the stack.
     */
     function hasValidBids() public view returns(bool) {
-        return BidId.unwrap(_highBidId) != 0x0;
+        return BidId.unwrap(highBidId) != 0x0;
     }
 
     // internals
@@ -49,25 +49,25 @@ contract BidManager {
         require(amount >= minBid, "BidStack: Bid should be 5% higher");
 
         // Position new bid
-        Bid memory newBid = _bids[bidId];
+        Bid memory newBid = bids[bidId];
         newBid.next = BidId.wrap(0x0);
-        newBid.prev = _highBidId;
+        newBid.prev = highBidId;
         newBid.amount += amount;
-        _bids[bidId] = newBid;
+        bids[bidId] = newBid;
 
         // Adjust previous highest bid
-        _bids[_highBidId].next = bidId;
-        _highBidId = bidId;
+        bids[highBidId].next = bidId;
+        highBidId = bidId;
     }
 
     function _removeBid(BidId bidId) internal returns (uint256) {
-        Bid memory bid = _bids[bidId];
-        delete _bids[bidId];
-        _bids[bid.prev].next = bid.next;
-        _bids[bid.next].prev = bid.prev;
+        Bid memory bid = bids[bidId];
+        delete bids[bidId];
+        bids[bid.prev].next = bid.next;
+        bids[bid.next].prev = bid.prev;
 
-        if (BidId.unwrap(bidId) == BidId.unwrap(_highBidId)) {
-          _highBidId = bid.prev;
+        if (BidId.unwrap(bidId) == BidId.unwrap(highBidId)) {
+          highBidId = bid.prev;
         }
         return bid.amount;
     }
@@ -83,6 +83,6 @@ contract BidManager {
 
     /// @notice Test if a given bidId represents a valid bid.
     function _isValidBid(BidId bidId) internal view returns (bool) {
-        return _bids[bidId].amount > 0;
+        return bids[bidId].amount > 0;
     }
 }
