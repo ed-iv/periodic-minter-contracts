@@ -71,7 +71,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId, receiver.address, amount * 2);
+        .withArgs(bidId, receiver.address, amount * 2, baseTokenURI);
 
       const highest = await abstractInstance.getHighestBidAmount();
       expect(highest).to.equal(amount * 2);
@@ -88,7 +88,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
 
@@ -99,7 +99,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3, baseTokenURI);
 
       const highest = await abstractInstance.getHighestBidAmount();
       expect(highest).to.equal(amount * 3);
@@ -116,7 +116,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId, receiver.address, amount * 2);
+        .withArgs(bidId, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
       const tx2 = abstractInstance
@@ -137,7 +137,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId, receiver.address, amount * 2);
+        .withArgs(bidId, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
 
@@ -181,7 +181,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId, receiver.address, amount * 2);
+        .withArgs(bidId, receiver.address, amount * 2, baseTokenURI);
 
       const tx2 = abstractInstance.connect(receiver).updateBid(baseTokenURI, baseTokenURI, { value: amount * 10 });
       await expect(tx2)
@@ -203,7 +203,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId, receiver.address, amount * 2);
+        .withArgs(bidId, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
 
@@ -227,7 +227,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
       const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
@@ -237,7 +237,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3, baseTokenURI);
 
       // TODO - Test that funds are returned correctly
       const tx3 = abstractInstance.connect(receiver).cancelBid(baseTokenURI, baseTokenURI);
@@ -259,7 +259,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
       const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
@@ -268,7 +268,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3, baseTokenURI);
 
       const tx3 = abstractInstance.connect(stranger).cancelBid(baseTokenURI, baseTokenURI);
       await expect(tx3).to.be.revertedWithCustomError(abstractInstance, "CannotCancelHighBid");
@@ -285,7 +285,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
       const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
@@ -295,7 +295,7 @@ describe("PeriodicMinter", function () {
 
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3, baseTokenURI);
 
       const tx3 = abstractInstance.connect(stranger).cancelBid(baseTokenURI, "bogus");
       await expect(tx3).to.be.revertedWithCustomError(abstractInstance, "InvalidBidId");
@@ -317,7 +317,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature, { value: amount * 2 });
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2, baseTokenURI);
 
       await time.increase(86400);
 
@@ -341,7 +341,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
       const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
@@ -350,7 +350,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3, baseTokenURI);
 
       await time.increase(86400);
 
@@ -375,7 +375,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
       const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
@@ -384,7 +384,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3, baseTokenURI);
 
       await time.increase(86400);
 
@@ -412,7 +412,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2, baseTokenURI);
 
       // Bid 2 (User B)
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
@@ -422,7 +422,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3, baseTokenURI);
 
       // Update Bid 1 (User A)
       const tx3 = abstractInstance.connect(receiver).updateBid(baseTokenURI, baseTokenURI, { value: amount * 10 });
@@ -455,7 +455,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
       const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
@@ -464,7 +464,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3, baseTokenURI);
 
       const tx3 = abstractInstance.mint(stranger.address, baseTokenURI, baseTokenURI);
       await expect(tx3).to.be.revertedWith(`Not yet callable`);
@@ -482,7 +482,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature1, { value: amount * 2 });
       await expect(tx1)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId1, receiver.address, amount * 2);
+        .withArgs(bidId1, receiver.address, amount * 2, baseTokenURI);
 
       const signature2 = await generateSignature(network, abstractInstance.address, owner);
       const bidId2 = getBidId(stranger.address, baseTokenURI, baseTokenURI);
@@ -491,7 +491,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature2, { value: amount * 3 });
       await expect(tx2)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId2, stranger.address, amount * 3);
+        .withArgs(bidId2, stranger.address, amount * 3, baseTokenURI);
 
       const signature3 = await generateSignature(network, abstractInstance.address, owner);
       const bidId3 = getBidId(owner.address, baseTokenURI, baseTokenURI);
@@ -500,7 +500,7 @@ describe("PeriodicMinter", function () {
         .createBid(baseTokenURI, baseTokenURI, signature3, { value: amount * 4 });
       await expect(tx3)
         .to.emit(abstractInstance, "CreateBid")
-        .withArgs(bidId3, owner.address, amount * 4);
+        .withArgs(bidId3, owner.address, amount * 4, baseTokenURI);
 
       await time.increase(86400);
 
@@ -541,7 +541,7 @@ describe("PeriodicMinter", function () {
       const tx1 = abstractInstance
         .connect(receiver)
         .createBid(baseTokenURI, baseTokenURI, signature, { value: amount });
-      await expect(tx1).to.emit(abstractInstance, "CreateBid").withArgs(bidId, receiver.address, amount);
+      await expect(tx1).to.emit(abstractInstance, "CreateBid").withArgs(bidId, receiver.address, amount, baseTokenURI);
 
       await time.increase(86400);
 
