@@ -45,14 +45,14 @@ contract BidManager {
 
     function _createBid(BidId bidId, uint256 amount) internal {
         uint256 minBid = _getMinBid();
-        require(amount >= _minBid, "BidStack: Bid should be higher than minimum");
-        require(amount >= minBid, "BidStack: Bid should be 5% higher");
 
         // Position new bid
         Bid memory newBid = bids[bidId];
         newBid.next = BidId.wrap(0x0);
         newBid.prev = highBidId;
         newBid.amount += amount;
+        require(newBid.amount >= _minBid, "BidStack: Bid should be higher than minimum");
+        require(newBid.amount >= minBid, "BidStack: Bid should be 5% higher");
         bids[bidId] = newBid;
 
         // Adjust previous highest bid
