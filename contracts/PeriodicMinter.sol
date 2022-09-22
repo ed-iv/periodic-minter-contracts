@@ -18,8 +18,8 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
     using Address for address;
 
     IERC721Abstract _factory;
-    uint256 mintsRemaining = 2; // TODO - Find better way to test
-    uint256 auctionEndTime;
+    uint256 public mintsRemaining = 2; // TODO - Find better way to test
+    uint256 public auctionEndTime;
     address private _owner;
     uint256 public mintedBalance;
     mapping(bytes32 => bool) private _mintedUrls;
