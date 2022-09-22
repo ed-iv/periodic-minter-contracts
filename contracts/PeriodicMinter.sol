@@ -27,6 +27,7 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
     event CreateBid(BidId bidId, address indexed account, uint256 amount, string tokenURI);
     event UpdateBid(BidId bidId, address indexed account, uint256 newAmount, uint256 addition);
     event CancelBid(BidId bidId, address indexed account, uint256 amount);
+    event MintBid(BidId bidId);
     event Withdrawn(address indexed account, uint256 amount);
 
     constructor(string memory name) BidVerifier(name) {
@@ -89,6 +90,7 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
         _factory.mint(bidder, tokenUri);
         _mintedUrls[keccak256(abi.encodePacked(url))] = true;
         mintedBalance += bidAmount;
+        emit MintBid(bidId);
     }
 
     function pause() public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
