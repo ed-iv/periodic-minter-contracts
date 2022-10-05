@@ -23,6 +23,7 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
     address private _owner;
     uint256 public mintedBalance;
     mapping(bytes32 => bool) private _mintedUrls;
+    mapping(bytes32 => BidId) private _urlBids;
 
     event CreateBid(BidId bidId, address indexed account, uint256 amount, string tokenURI);
     event UpdateBid(BidId bidId, address indexed account, uint256 newAmount, uint256 addition);
@@ -46,10 +47,16 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
         string calldata tokenUri,
         bytes calldata signature
     ) external payable whenNotPaused {
-        if (_mintedUrls[keccak256(abi.encodePacked(url))]) revert AlreadyMinted(url);
+        bytes32 urlHash = keccak256(abi.encodePacked(url));
+        if (_mintedUrls[urlHash]) revert AlreadyMinted(url);
+        require(
+          BidId.unwrap(_urlBids[urlHash]) == 0x0,
+          "URL already has bid"
+        );
         _verifySignature(url, tokenUri, _owner, signature);
         BidId bidId = _getBidId(_msgSender(), url, tokenUri);
         if (!hasValidBids()) auctionEndTime = block.timestamp + 86400;
+        _urlBids[urlHash] = bidId;
         _createBid(bidId, msg.value);
         emit CreateBid(bidId, _msgSender(), msg.value, tokenUri);
     }
@@ -68,6 +75,7 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
         if (BidId.unwrap(bidId) == BidId.unwrap(highBidId)) revert CannotCancelHighBid();
         uint256 bidAmount = bids[bidId].amount;
         if (bidAmount == 0) revert InvalidBidId();
+        _urlBids[keccak256(abi.encodePacked(url))] = BidId.wrap(0x0);
         _removeBid(bidId);
         (bool sent, ) = bidder.call{ value: bidAmount }("");
         require(sent, "Exchange: Failed to send Ether");
