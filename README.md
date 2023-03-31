@@ -14,7 +14,7 @@ This contract contains implementation details for how bids and the collection of
 
 The `BidId` is computed by taking the `keccak256` hash of the account that created the bid (`bidder`), the url (`url`) of the website that the abstracted artwork was sourced from, and the desired token URI (`tokenUri`) which points to the rendered image, i.e. `keccak256(abi.encodePacked(bidder, url, tokenUri ))`.
 ___
-## 3 `BidVerifier.sol`
+## `BidVerifier.sol`
 Contains logic responsible for verifying that incoming bids can be trusted as originating from our back-end.
 
 Each bid includes a token URI that points to the NFT metadata to be used in the case that the bid wins the auction and is minted. The `image` property in this metadata points to an image that is rendered on our back-end and persisted to IPFS. To prevent URIs pointing to arbitrary metadata from being accepted when a new bid is made, we need to verify that the metadata (and the included image) were generated on our back-end.
