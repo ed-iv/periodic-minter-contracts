@@ -23,6 +23,7 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
     address private _owner;
     uint256 public mintedBalance;
     mapping(bytes32 => bool) private _mintedUrls;
+    mapping(bytes32 => BidId) private _urlBids;
 
     event CreateBid(BidId bidId, address indexed account, uint256 amount, string tokenURI);
     event UpdateBid(BidId bidId, address indexed account, uint256 newAmount, uint256 addition);
@@ -45,20 +46,36 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
         string calldata url,
         string calldata tokenUri,
         bytes calldata signature
-    ) external payable whenNotPaused {
-        if (_mintedUrls[keccak256(abi.encodePacked(url))]) revert AlreadyMinted(url);
+    ) external payable whenNotPaused nonReentrant {
+        bytes32 urlHash = keccak256(abi.encodePacked(url));
+        if (_mintedUrls[urlHash]) revert AlreadyMinted(url);
+        BidId existingBidId = _urlBids[urlHash];
+        if (BidId.unwrap(existingBidId) != 0x0) {
+          Bid memory existingBid = bids[existingBidId];
+          uint256 minBid = existingBid.amount + existingBid.amount * _minBidIncrease / 10000;
+          require(msg.value >= minBid, "BidStack: Bid should be 5% higher");
+          _cancelBidById(existingBidId);
+        }
         _verifySignature(url, tokenUri, _owner, signature);
         BidId bidId = _getBidId(_msgSender(), url, tokenUri);
         if (!hasValidBids()) auctionEndTime = block.timestamp + 86400;
-        _createBid(bidId, msg.value);
+        _urlBids[urlHash] = bidId;
+        _createBid(_msgSender(), bidId, msg.value);
         emit CreateBid(bidId, _msgSender(), msg.value, tokenUri);
+    }
+
+    function _cancelBidById(BidId bidId) internal {
+        Bid memory bid = bids[bidId];
+        _removeBid(bidId);
+        (bool sent, ) = bid.bidder.call{ value: bid.amount }("");
+        require(sent, "Exchange: Failed to send Ether");
     }
 
     function updateBid(string calldata url, string calldata tokenUri) external payable whenNotPaused {
         BidId bidId = _getBidId(_msgSender(), url, tokenUri);
         uint256 currAmount = bids[bidId].amount;
         require(currAmount > 0, "Bid does not exist");
-        _createBid(bidId, msg.value);
+        _createBid(_msgSender(), bidId, msg.value);
         emit UpdateBid(bidId, msg.sender, currAmount + msg.value, msg.value);
     }
 
@@ -68,10 +85,8 @@ contract PeriodicMinter is AccessControl, Pausable, ReentrancyGuard, BidManager,
         if (BidId.unwrap(bidId) == BidId.unwrap(highBidId)) revert CannotCancelHighBid();
         uint256 bidAmount = bids[bidId].amount;
         if (bidAmount == 0) revert InvalidBidId();
-        _removeBid(bidId);
-        (bool sent, ) = bidder.call{ value: bidAmount }("");
-        require(sent, "Exchange: Failed to send Ether");
-
+        _urlBids[keccak256(abi.encodePacked(url))] = BidId.wrap(0x0);
+        _cancelBidById(bidId);
         emit CancelBid(bidId, bidder, bidAmount);
     }
 

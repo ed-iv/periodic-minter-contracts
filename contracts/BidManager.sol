@@ -6,7 +6,7 @@ error CannotCancelHighBid();
 error Unauthorized();
 
 contract BidManager {
-    uint256 private _minBidIncrease = 500;
+    uint256 internal _minBidIncrease = 500;
     uint256 private _minBid = 100000000000000; // 0.0001 eth
     BidId public highBidId = BidId.wrap(0x0);
 
@@ -15,6 +15,7 @@ contract BidManager {
     struct Bid {
         BidId next;
         BidId prev;
+        address bidder;
         uint256 amount;
     }
 
@@ -43,11 +44,12 @@ contract BidManager {
         minBid = highestBidAmount + highestBidAmount * _minBidIncrease / 10000;
     }
 
-    function _createBid(BidId bidId, uint256 amount) internal {
+    function _createBid(address bidder, BidId bidId, uint256 amount) internal {
         uint256 minBid = _getMinBid();
 
         // Position new bid
         Bid memory newBid = bids[bidId];
+        newBid.bidder = bidder;
         newBid.next = BidId.wrap(0x0);
         newBid.prev = highBidId;
         newBid.amount += amount;
