@@ -1,5 +1,5 @@
-# Abstract Browsing Contract Overview
-Abstract Browsing enables users to create "abstracted" renderings of webpages. Users can then place a bid in order to mint the image of their composition as an NFT. Periodically (every 24 hours), the highest bid is minted. All other bids remain in the queue for the next auction. These periodic auctions will continue until the max number of mints allocated has been reached. See below for additional details on each contract.
+# Wat this?
+This is an automated auction system created for an unreleased NFT project. Users would be able to visit a front-end where they could compose their own artworks and then place a bid to mint it. The highest bid within a given auction period (default 24 hours) could then be minted as an NFT. All other bids remain in the queue for the next auction. These periodic auctions continue until the max number of mints allocated has been reached. See below for additional details on each contract.
 
 ## `PeriodicMinter.sol`
 
